@@ -4,20 +4,54 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
+	"raytracer/internal"
 	"strconv"
 	"strings"
 )
 
 func main() {
-	fname := "out/hello-gradient.ppm"
-	f, err := os.Open(fname)
-	if err != nil {
-		f, err = os.Create(fname)
-		if err != nil {
-			panic(err)
-		}
+	aspectRatio := float32(16.0 / 9.0)
+	imageWidth := float32(400)
+	viewportHeight := float32(2.0)
+	imageHeight := float32(math.Floor(float64(imageWidth)) / float64(aspectRatio))
+	if imageHeight < 1 {
+		imageHeight = 1
 	}
+	viewportWidth := viewportHeight * (float32(imageWidth) / float32(imageHeight))
+
+	focalLength := float32(1.0)
+	cameraCenter := internal.NewVec3[float32](0, 0, 0)
+
+	viewportU := internal.NewVec3[float32](viewportWidth, 0, 0)
+	viewportV := internal.NewVec3[float32](0, -viewportHeight, 0)
+
+	pixelDu := viewportU.Cpy()
+	pixelDu.Scale(1 / imageWidth)
+	pixelDv := viewportV.Cpy()
+	pixelDv.Scale(1 / imageHeight)
+
+	viewportUHalf := viewportU.Cpy()
+	viewportUHalf.Scale(0.5)
+	viewportVHalf := viewportV.Cpy()
+	viewportVHalf.Scale(0.5)
+
+	viewportUpperLeft := cameraCenter.Cpy()
+	viewportUpperLeft.Sub(internal.NewVec3[float32](0, 0, focalLength))
+	viewportUpperLeft.Sub(viewportUHalf)
+	viewportUpperLeft.Sub(viewportVHalf)
+
+	pixel00 := internal.NewVec3[float32](0, 0, 0)
+	pixel00.Add(pixelDu)
+	pixel00.Add(pixelDv)
+	pixel00.Scale(0.5)
+	pixel00.Add(viewportUpperLeft)
+
+	f, err := internal.Overwrite("out/img.ppm")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
 	w := 256
 	h := 256
 	ppm := []string{
@@ -28,12 +62,30 @@ func main() {
 	for j := 0; j < h; j++ {
 		fmt.Printf("computing %d of %d\n", j, h-1)
 		for i := 0; i < w; i++ {
-			r := math.Floor(float64(i) / float64((w - 1)) * 256)
-			g := math.Floor(float64(j) / float64((h - 1)) * 256)
-			b := 0
-			ppm = append(ppm, fmt.Sprintf("%s %s %s", strconv.Itoa(int(r)), strconv.Itoa(int(g)), strconv.Itoa(int(b))))
+			duOffset := pixelDu.Cpy()
+			duOffset.Scale(float32(i))
+
+			dvOffset := pixelDv.Cpy()
+			dvOffset.Scale(float32(j))
+
+			pixelCenter := pixel00.Cpy()
+			pixelCenter.Add(duOffset)
+			pixelCenter.Add(dvOffset)
+
+			rayDir := pixelCenter.Cpy()
+			rayDir.Sub(cameraCenter)
+
+			ray := internal.NewRay(cameraCenter, rayDir)
+			color := ray.GetColor()
+			color.ToRGB()
+			colorStr := color.String()
+
+			ppm = append(ppm, colorStr)
 		}
 	}
 
-	io.WriteString(f, strings.Join(ppm, "\n"))
+	_, err = io.WriteString(f, strings.Join(ppm, "\n"))
+	if err != nil {
+		panic(err)
+	}
 }
