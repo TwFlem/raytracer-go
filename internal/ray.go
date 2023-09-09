@@ -42,15 +42,15 @@ func (r *Ray) GetColor() Vec3[float32] {
 
 func getClosestRootToTheCamera(center Vec3[float32], radius float32, r *Ray) float32 {
 	ASubC := Sub(r.origin, center)
-	a := Dot(r.dir, r.dir)
-	b := 2 * Dot(ASubC, r.dir)
-	c := Dot(ASubC, ASubC) - radius*radius
+	a := r.dir.LenSq()
+	halfB := Dot(r.dir, ASubC)
+	c := ASubC.LenSq() - radius*radius
 
-	discriminate := (b*b - 4*a*c)
+	discriminate := (halfB*halfB - a*c)
 
 	if discriminate < 0 {
 		return -1
 	}
 
-	return (-b - float32(math.Sqrt(float64(discriminate)))) / (2 * a)
+	return (-halfB - float32(math.Sqrt(float64(discriminate)))) / a
 }
