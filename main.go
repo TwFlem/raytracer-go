@@ -52,8 +52,8 @@ func main() {
 	}
 	defer f.Close()
 
-	w := 256
-	h := 256
+	w := int(imageWidth)
+	h := int(imageHeight)
 	ppm := []string{
 		"P3",
 		strconv.Itoa(w) + " " + strconv.Itoa(h),

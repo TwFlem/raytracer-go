@@ -121,6 +121,10 @@ func (v *Vec3[T]) Cross(l, r Vec3[T]) {
 	v.Z = l.X*r.Y - l.Y*r.X
 }
 
+func Dot[T Float](l, r Vec3[T]) T {
+	return l.X*r.X + l.Y*r.Y + l.Z*r.Z
+}
+
 func (v *Vec3[T]) String() string {
 	return fmt.Sprintf("%d %d %d", int(v.X), int(v.Y), int(v.Z))
 }
