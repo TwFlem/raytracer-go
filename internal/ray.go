@@ -1,5 +1,7 @@
 package internal
 
+import "math"
+
 type Ray struct {
 	origin Vec3[float32]
 	dir    Vec3[float32]
@@ -20,8 +22,13 @@ func (r *Ray) At(t float32) Vec3[float32] {
 }
 
 func (r *Ray) GetColor() Vec3[float32] {
-	if hitSphere(NewVec3[float32](0, 0, -1), 0.5, r) {
-		return NewVec3[float32](1, 0, 0)
+	sphereCenter := NewVec3[float32](0, 0, -1)
+	if t := getClosestRootToTheCamera(sphereCenter, 0.5, r); t > 0 {
+		n := Sub(r.At(t), sphereCenter)
+		n.Unit()
+		color := NewVec3[float32](1+n.X, 1+n.Y, 1+n.Z)
+		color.Scale(0.5)
+		return color
 	}
 
 	unit := Unit(r.dir)
@@ -33,11 +40,17 @@ func (r *Ray) GetColor() Vec3[float32] {
 	return Add(Scale(white, (1.0-a)), Scale(blue, a))
 }
 
-func hitSphere(center Vec3[float32], radius float32, ray *Ray) bool {
+func getClosestRootToTheCamera(center Vec3[float32], radius float32, ray *Ray) float32 {
 	ASubC := Sub(ray.origin, center)
 	a := Dot(ray.dir, ray.dir)
 	b := Dot(Scale(ray.dir, 2), ASubC)
 	c := Dot(ASubC, ASubC) - radius*radius
 
-	return (b*b - 4*a*c) >= 0
+	discriminate := (b*b - 4*a*c)
+
+	if discriminate < 0 {
+		return -1
+	}
+
+	return (-b - float32(math.Sqrt(float64(discriminate)))) / 2 * a
 }

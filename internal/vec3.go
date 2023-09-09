@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"math"
 )
 
 type Vec3[T Float] struct {
@@ -100,9 +101,8 @@ func Scale[T Float](a Vec3[T], scaler T) Vec3[T] {
 
 func (v *Vec3[T]) Unit() {
 	lensq := v.LenSq()
-	v.X *= 1 / lensq
-	v.Y *= 1 / lensq
-	v.Z *= 1 / lensq
+	l := T(math.Sqrt(float64(lensq)))
+	v.Scale(1 / l)
 }
 
 func Unit[T Float](a Vec3[T]) Vec3[T] {
