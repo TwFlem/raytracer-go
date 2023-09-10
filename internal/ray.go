@@ -99,9 +99,9 @@ func (s *Sphere) Hit(r *Ray, tMin float32, tMax float32) (HitInfo, bool) {
 
 	sqt := float32(math.Sqrt(float64(discriminate)))
 	var t float32
-	if r := (-halfB - sqt) / a; tMin <= r && r <= tMax {
+	if r := (-halfB - sqt) / a; Contains(tMin, tMax, r) {
 		t = r
-	} else if r := (-halfB + sqt) / a; tMin <= r && r <= tMax {
+	} else if r := (-halfB + sqt) / a; Contains(tMin, tMax, r) {
 		t = r
 	} else {
 		return HitInfo{}, false
