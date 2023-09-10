@@ -21,12 +21,9 @@ func (r *Ray) At(t float32) Vec3[float32] {
 	return dir
 }
 
-func (r *Ray) GetColor() Vec3[float32] {
-	sphereCenter := NewVec3[float32](0, 0, -1)
-	if t := getClosestRootToTheCamera(sphereCenter, 0.5, r); t > 0 {
-		n := Sub(r.At(t), sphereCenter)
-		n.Unit()
-		color := NewVec3[float32](1+n.X, 1+n.Y, 1+n.Z)
+func (r *Ray) GetColor(world *World) Vec3[float32] {
+	if hi, ok := world.Hit(r, 0, float32(math.Inf(1))); ok {
+		color := NewVec3[float32](1+hi.normal.X, 1+hi.normal.Y, 1+hi.normal.Z)
 		color.Scale(0.5)
 		return color
 	}
@@ -40,17 +37,86 @@ func (r *Ray) GetColor() Vec3[float32] {
 	return Add(Scale(white, (1.0-a)), Scale(blue, a))
 }
 
-func getClosestRootToTheCamera(center Vec3[float32], radius float32, r *Ray) float32 {
-	ASubC := Sub(r.origin, center)
+type HitInfo struct {
+	point     Vec3[float32]
+	normal    Vec3[float32]
+	t         float32
+	frontFace bool
+}
+
+func (hi *HitInfo) SetFaceNormal(r *Ray, unitOutwardNormal Vec3[float32]) {
+	frontFace := Dot(r.dir, unitOutwardNormal) < 0
+	hi.frontFace = frontFace
+	if frontFace {
+		hi.normal = unitOutwardNormal
+	} else {
+		hi.normal = Scale(unitOutwardNormal, -1)
+	}
+}
+
+// Hittable anything that can be hit by a Ray
+type Hittable interface {
+	Hit(r *Ray, tMin, tMax float32) (HitInfo, bool)
+}
+
+type World struct {
+	hittables []Hittable
+}
+
+func NewWorld(hittables []Hittable) *World {
+	return &World{
+		hittables: hittables,
+	}
+}
+
+func (w *World) Hit(r *Ray, tMin float32, tMax float32) (HitInfo, bool) {
+	for i := range w.hittables {
+		hi, ok := w.hittables[i].Hit(r, tMin, tMax)
+		if ok {
+			return hi, true
+		}
+	}
+
+	return HitInfo{}, false
+}
+
+type Sphere struct {
+	Center Vec3[float32]
+	Radius float32
+}
+
+func (s *Sphere) Hit(r *Ray, tMin float32, tMax float32) (HitInfo, bool) {
+	ASubC := Sub(r.origin, s.Center)
 	a := r.dir.LenSq()
 	halfB := Dot(r.dir, ASubC)
-	c := ASubC.LenSq() - radius*radius
+	c := ASubC.LenSq() - s.Radius*s.Radius
 
 	discriminate := (halfB*halfB - a*c)
 
 	if discriminate < 0 {
-		return -1
+		return HitInfo{}, false
 	}
 
-	return (-halfB - float32(math.Sqrt(float64(discriminate)))) / a
+	sqt := float32(math.Sqrt(float64(discriminate)))
+	var t float32
+	if r := (-halfB - sqt) / a; tMin <= r && r <= tMax {
+		t = r
+	} else if r := (-halfB + sqt) / a; tMin <= r && r <= tMax {
+		t = r
+	} else {
+		return HitInfo{}, false
+	}
+
+	point := r.At(t)
+	norm := Scale(Sub(point, s.Center), 1/s.Radius)
+
+	hi := HitInfo{
+		point:  point,
+		normal: norm,
+		t:      t,
+	}
+
+	hi.SetFaceNormal(r, norm)
+	return hi, true
+
 }
