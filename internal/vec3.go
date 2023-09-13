@@ -130,6 +130,9 @@ func (v *Vec3[T]) String() string {
 }
 
 func (v *Vec3[T]) ToRGB() {
+	v.X = Clamp(0, 1, v.X)
+	v.Y = Clamp(0, 1, v.Y)
+	v.Z = Clamp(0, 1, v.Z)
 	v.X *= 255.999
 	v.Y *= 255.999
 	v.Z *= 255.999
