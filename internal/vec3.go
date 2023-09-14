@@ -139,6 +139,12 @@ func (v *Vec3[T]) ToRGB() {
 	v.Z *= 255.999
 }
 
+func (v *Vec3[T]) ToGamma2() {
+	v.X = T(math.Sqrt(float64(v.X)))
+	v.Y = T(math.Sqrt(float64(v.Y)))
+	v.Z = T(math.Sqrt(float64(v.Z)))
+}
+
 func NewVec3Rand32() Vec3[float32] {
 	return NewVec3[float32](rand.Float32(), rand.Float32(), rand.Float32())
 }

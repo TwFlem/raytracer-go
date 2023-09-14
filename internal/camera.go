@@ -99,6 +99,7 @@ func (c *Camera) Render(world *World, writer io.Writer) error {
 				sample.Add(ray.GetColor(world, c.bounceDepth))
 			}
 			sample.Scale(1.0 / float32(c.samplesPerPixel))
+			sample.ToGamma2()
 			sample.ToRGB()
 
 			ppm = append(ppm, sample.String())
