@@ -1,5 +1,7 @@
 package internal
 
+import "math/rand"
+
 type Float interface {
 	float32 | float64
 }
@@ -20,4 +22,8 @@ func Clamp[T Float](min, max, val T) T {
 		return max
 	}
 	return val
+}
+
+func RandF32N(min, max float32) float32 {
+	return min + rand.Float32()*(max-min)
 }

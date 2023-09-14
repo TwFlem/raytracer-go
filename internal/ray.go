@@ -21,9 +21,14 @@ func (r *Ray) At(t float32) Vec3[float32] {
 	return dir
 }
 
-func (r *Ray) GetColor(world *World) Vec3[float32] {
-	if hi, ok := world.Hit(r, 0, float32(math.Inf(1))); ok {
-		color := NewVec3[float32](1+hi.normal.X, 1+hi.normal.Y, 1+hi.normal.Z)
+func (r *Ray) GetColor(world *World, remainingBounces int) Vec3[float32] {
+	if remainingBounces == 0 {
+		return NewVec3Zero[float32]()
+	}
+	if hitInfo, ok := world.Hit(r, 0.001, float32(math.Inf(1))); ok {
+		dir := Add(hitInfo.normal, NewVec3UnitRandOnUnitSphere32())
+		bouncedRay := NewRay(hitInfo.point, dir)
+		color := bouncedRay.GetColor(world, remainingBounces-1)
 		color.Scale(0.5)
 		return color
 	}

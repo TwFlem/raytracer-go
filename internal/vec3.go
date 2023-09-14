@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"math"
+	"math/rand"
 )
 
 type Vec3[T Float] struct {
@@ -136,4 +137,33 @@ func (v *Vec3[T]) ToRGB() {
 	v.X *= 255.999
 	v.Y *= 255.999
 	v.Z *= 255.999
+}
+
+func NewVec3Rand32() Vec3[float32] {
+	return NewVec3[float32](rand.Float32(), rand.Float32(), rand.Float32())
+}
+
+func NewVec3RandRange32(min, max float32) Vec3[float32] {
+	return NewVec3[float32](RandF32N(min, max), RandF32N(min, max), RandF32N(min, max))
+}
+
+func NewVec3UnitRandOnUnitSphere32() Vec3[float32] {
+	for {
+		v := NewVec3RandRange32(-1, 1)
+		if v.LenSq() < 1.0 {
+			v.Unit()
+			return v
+		}
+	}
+}
+
+// NewVec3RandInHemisphereOfSurroundingUnitSphere32 gives a random vector that lies on a unit sphere that is in the same
+// hemisphere as the surface normal provided
+func NewVec3RandInHemisphereOfSurroundingUnitSphere32(norm Vec3[float32]) Vec3[float32] {
+	v := NewVec3UnitRandOnUnitSphere32()
+	if Dot(v, norm) < 0 {
+		v.Scale(-1)
+		return v
+	}
+	return v
 }
