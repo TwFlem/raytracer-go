@@ -26,11 +26,12 @@ func (r *Ray) GetColor(world *World, remainingBounces int) Vec3[float32] {
 		return NewVec3Zero[float32]()
 	}
 	if hitInfo, ok := world.Hit(r, 0.001, float32(math.Inf(1))); ok {
-		dir := Add(hitInfo.normal, NewVec3UnitRandOnUnitSphere32())
-		bouncedRay := NewRay(hitInfo.point, dir)
-		color := bouncedRay.GetColor(world, remainingBounces-1)
-		color.Scale(0.5)
-		return color
+		if scatterInfo, ok := hitInfo.material.Scatter(r, hitInfo); ok {
+			color := scatterInfo.ray.GetColor(world, remainingBounces-1)
+			color.Mul(scatterInfo.attenuation)
+			return color
+		}
+		return NewVec3[float32](0, 0, 0)
 	}
 
 	unit := Unit(r.dir)
@@ -42,10 +43,63 @@ func (r *Ray) GetColor(world *World, remainingBounces int) Vec3[float32] {
 	return Add(Scale(white, (1.0-a)), Scale(blue, a))
 }
 
+type ScatterInfo struct {
+	ray         Ray
+	attenuation Vec3[float32]
+}
+
+type Material interface {
+	Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool)
+}
+
+type Lambertian struct {
+	albedo Vec3[float32]
+}
+
+func NewLambertian(albedo Vec3[float32]) Lambertian {
+	return Lambertian{
+		albedo: albedo,
+	}
+}
+
+func (l *Lambertian) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
+	dir := Add(hi.normal, NewVec3UnitRandOnUnitSphere32())
+	if dir.NearZero() {
+		dir = hi.normal
+	}
+	return ScatterInfo{
+		ray:         *NewRay(hi.point, dir),
+		attenuation: l.albedo,
+	}, true
+}
+
+type Metal struct {
+	albedo Vec3[float32]
+}
+
+func NewMetal(albedo Vec3[float32]) Metal {
+	return Metal{
+		albedo: albedo,
+	}
+}
+
+func (m *Metal) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
+	length := 2 * Dot(hi.point, hi.normal)
+	n := hi.normal.Cpy()
+	n.Scale(length)
+	reflected := Sub(hi.point, n)
+	return ScatterInfo{
+		ray:         *NewRay(hi.point, reflected),
+		attenuation: m.albedo,
+	}, true
+
+}
+
 type HitInfo struct {
 	point     Vec3[float32]
 	normal    Vec3[float32]
 	t         float32
+	material  Material
 	frontFace bool
 }
 
@@ -86,8 +140,9 @@ func (w *World) Hit(r *Ray, tMin float32, tMax float32) (HitInfo, bool) {
 }
 
 type Sphere struct {
-	Center Vec3[float32]
-	Radius float32
+	Center   Vec3[float32]
+	Radius   float32
+	Material Material
 }
 
 func (s *Sphere) Hit(r *Ray, tMin float32, tMax float32) (HitInfo, bool) {
@@ -116,9 +171,10 @@ func (s *Sphere) Hit(r *Ray, tMin float32, tMax float32) (HitInfo, bool) {
 	norm := Scale(Sub(point, s.Center), 1/s.Radius)
 
 	hi := HitInfo{
-		point:  point,
-		normal: norm,
-		t:      t,
+		point:    point,
+		normal:   norm,
+		t:        t,
+		material: s.Material,
 	}
 
 	hi.SetFaceNormal(r, norm)

@@ -145,6 +145,12 @@ func (v *Vec3[T]) ToGamma2() {
 	v.Z = T(math.Sqrt(float64(v.Z)))
 }
 
+const nearZeroEpsilon float32 = 1e-8
+
+func (v *Vec3[T]) NearZero() bool {
+	return T(math.Abs(float64(v.X))) < T(nearZeroEpsilon) && T(math.Abs(float64(v.Y))) < T(nearZeroEpsilon) && T(math.Abs(float64(v.Z))) < T(nearZeroEpsilon)
+}
+
 func NewVec3Rand32() Vec3[float32] {
 	return NewVec3[float32](rand.Float32(), rand.Float32(), rand.Float32())
 }

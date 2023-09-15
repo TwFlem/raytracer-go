@@ -13,14 +13,31 @@ func main() {
 	}
 	defer f.Close()
 
+	matGround := internal.NewLambertian(internal.NewVec3[float32](0.8, 0.8, 0))
+	matLeft := internal.NewMetal(internal.NewVec3[float32](0.7, 0.7, 0.3))
+	matCenter := internal.NewLambertian(internal.NewVec3[float32](0.8, 0.8, 0.8))
+	matRight := internal.NewMetal(internal.NewVec3[float32](0.8, 0.6, 0.2))
+
 	hittables := []internal.Hittable{
 		&internal.Sphere{
-			Center: internal.NewVec3[float32](0, 0, -1),
-			Radius: 0.5,
+			Center:   internal.NewVec3[float32](0, 0, -1),
+			Radius:   0.5,
+			Material: &matCenter,
 		},
 		&internal.Sphere{
-			Center: internal.NewVec3[float32](0, -100.5, -1),
-			Radius: 100,
+			Center:   internal.NewVec3[float32](-1, 0, -1),
+			Radius:   0.5,
+			Material: &matLeft,
+		},
+		&internal.Sphere{
+			Center:   internal.NewVec3[float32](1, 0, -1),
+			Radius:   0.5,
+			Material: &matRight,
+		},
+		&internal.Sphere{
+			Center:   internal.NewVec3[float32](0, -100.5, -1),
+			Radius:   100,
+			Material: &matGround,
 		},
 	}
 
