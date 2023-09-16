@@ -15,8 +15,8 @@ func main() {
 
 	matGround := internal.NewLambertian(internal.NewVec3[float32](0.8, 0.8, 0))
 	matCenter := internal.NewLambertian(internal.NewVec3[float32](0.7, 0.3, 0.3))
-	matLeft := internal.NewMetal(internal.NewVec3[float32](0.8, 0.8, 0.8))
-	matRight := internal.NewMetal(internal.NewVec3[float32](0.8, 0.6, 0.2))
+	matLeft := internal.NewMetal(internal.NewVec3[float32](0.8, 0.8, 0.8), 0.3)
+	matRight := internal.NewMetal(internal.NewVec3[float32](0.8, 0.6, 0.2), 1)
 
 	hittables := []internal.Hittable{
 		&internal.Sphere{
