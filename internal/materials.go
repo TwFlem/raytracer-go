@@ -1,5 +1,7 @@
 package internal
 
+import "math"
+
 type Material interface {
 	Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool)
 }
@@ -43,10 +45,7 @@ func NewMetal(albedo Vec3[float32], fuzz float32) Metal {
 }
 
 func (m *Metal) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
-	length := 2 * Dot(hi.point, hi.normal)
-	n := hi.normal.Cpy()
-	n.Scale(length)
-	reflected := Sub(hi.point, n)
+	reflected := reflect(hi.point, hi.normal)
 
 	fuzz := NewVec3UnitRandOnUnitSphere32()
 	fuzz.Scale(m.fuzz)
@@ -59,5 +58,47 @@ func (m *Metal) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 		}, true
 	}
 	return ScatterInfo{}, false
+}
+
+type Refractor interface {
+	GetRefractionIndex() float32
+}
+
+type Dielectric struct {
+	refractiveIndex float32
+}
+
+func NewDielectric(refracitveIndex float32) Dielectric {
+	return Dielectric{
+		refractiveIndex: refracitveIndex,
+	}
+}
+
+func (d *Dielectric) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
+	etaOEtaPrime := float32(1.0 / d.refractiveIndex)
+	if !hi.frontFace {
+		etaOEtaPrime = d.refractiveIndex
+	}
+	if refractor, ok := hi.material.(Refractor); ok {
+		etaOEtaPrime *= refractor.GetRefractionIndex()
+	}
+
+	unitDir := r.dir.Cpy()
+	unitDir.Unit()
+
+	cosTheta := float32(math.Min(float64(Dot(Scale(unitDir, -1), hi.normal)), 1.0))
+	sinTheta := float32(math.Sqrt(1 - float64(cosTheta*cosTheta)))
+	if sinTheta*etaOEtaPrime > 1.0 {
+		reflected := reflect(hi.point, hi.normal)
+		return ScatterInfo{
+			ray:         *NewRay(hi.point, reflected),
+			attenuation: NewVec3[float32](1, 1, 1),
+		}, true
+	}
+	refracted := refract(unitDir, hi.normal, etaOEtaPrime)
+	return ScatterInfo{
+		ray:         *NewRay(hi.point, refracted),
+		attenuation: NewVec3[float32](1, 1, 1),
+	}, true
 
 }

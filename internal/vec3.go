@@ -179,3 +179,23 @@ func NewVec3RandInHemisphereOfSurroundingUnitSphere32(norm Vec3[float32]) Vec3[f
 	}
 	return v
 }
+
+func reflect(v, n Vec3[float32]) Vec3[float32] {
+	length := 2 * Dot(v, n)
+	n.Scale(length)
+	return Sub(v, n)
+}
+
+func refract(unitDir, n Vec3[float32], etaOEtaPrime float32) Vec3[float32] {
+	cosTheta := float32(math.Min(float64(Dot(Scale(unitDir, -1), n)), 1.0))
+
+	perp := n.Cpy()
+	perp.Scale(cosTheta)
+	perp.Add(unitDir)
+	perp.Scale(etaOEtaPrime)
+
+	parallel := n.Cpy()
+	parallel.Scale(-1 * float32(math.Sqrt(math.Abs(float64(1.0-perp.LenSq())))))
+
+	return Add(perp, parallel)
+}
