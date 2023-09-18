@@ -1,6 +1,9 @@
 package internal
 
-import "math"
+import (
+	"math"
+	"math/rand"
+)
 
 type Material interface {
 	Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool)
@@ -88,7 +91,8 @@ func (d *Dielectric) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 
 	cosTheta := float32(math.Min(float64(Dot(Scale(unitDir, -1), hi.normal)), 1.0))
 	sinTheta := float32(math.Sqrt(1 - float64(cosTheta*cosTheta)))
-	if sinTheta*etaOEtaPrime > 1.0 {
+	cannotRefract := sinTheta*etaOEtaPrime > 1.0
+	if cannotRefract || reflectance(cosTheta, etaOEtaPrime) > rand.Float32() {
 		reflected := reflect(hi.point, hi.normal)
 		return ScatterInfo{
 			ray:         *NewRay(hi.point, reflected),
@@ -100,5 +104,10 @@ func (d *Dielectric) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 		ray:         *NewRay(hi.point, refracted),
 		attenuation: NewVec3[float32](1, 1, 1),
 	}, true
+}
 
+func reflectance(cosTheta, etaOEtaPrime float32) float32 {
+	r0 := (1.0 - etaOEtaPrime) / (1.0 + etaOEtaPrime)
+	r0 *= r0
+	return r0 + (1-r0)*float32(math.Pow(1-float64(cosTheta), 5))
 }
