@@ -42,14 +42,19 @@ func NewWorld(hittables []Hittable) *World {
 }
 
 func (w *World) Hit(r *Ray, tMin float32, tMax float32) (HitInfo, bool) {
+	hitAny := false
+	closest := tMax
+	closestRecord := HitInfo{}
 	for i := range w.hittables {
-		hi, ok := w.hittables[i].Hit(r, tMin, tMax)
+		hi, ok := w.hittables[i].Hit(r, tMin, closest)
 		if ok {
-			return hi, true
+			hitAny = true
+			closestRecord = hi
+			closest = hi.t
 		}
 	}
 
-	return HitInfo{}, false
+	return closestRecord, hitAny
 }
 
 type Sphere struct {

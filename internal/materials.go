@@ -63,10 +63,6 @@ func (m *Metal) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 	return ScatterInfo{}, false
 }
 
-type Refractor interface {
-	GetRefractionIndex() float32
-}
-
 type Dielectric struct {
 	refractiveIndex float32
 }
@@ -78,30 +74,25 @@ func NewDielectric(refracitveIndex float32) Dielectric {
 }
 
 func (d *Dielectric) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
-	etaOEtaPrime := float32(1.0 / d.refractiveIndex)
-	if !hi.frontFace {
-		etaOEtaPrime = d.refractiveIndex
-	}
-	if refractor, ok := hi.material.(Refractor); ok {
-		etaOEtaPrime *= refractor.GetRefractionIndex()
+	etaOEtaPrime := d.refractiveIndex
+	if hi.frontFace {
+		etaOEtaPrime = 1.0 / d.refractiveIndex
 	}
 
-	unitDir := r.dir.Cpy()
-	unitDir.Unit()
+	unitDir := Unit(r.dir)
 
 	cosTheta := float32(math.Min(float64(Dot(Scale(unitDir, -1), hi.normal)), 1.0))
 	sinTheta := float32(math.Sqrt(1 - float64(cosTheta*cosTheta)))
 	cannotRefract := sinTheta*etaOEtaPrime > 1.0
+	var direction Vec3[float32]
 	if cannotRefract || reflectance(cosTheta, etaOEtaPrime) > rand.Float32() {
-		reflected := reflect(hi.point, hi.normal)
-		return ScatterInfo{
-			ray:         *NewRay(hi.point, reflected),
-			attenuation: NewVec3[float32](1, 1, 1),
-		}, true
+		direction = reflect(unitDir, hi.normal)
+	} else {
+		direction = refract(unitDir, hi.normal, etaOEtaPrime)
 	}
-	refracted := refract(unitDir, hi.normal, etaOEtaPrime)
+
 	return ScatterInfo{
-		ray:         *NewRay(hi.point, refracted),
+		ray:         *NewRay(hi.point, direction),
 		attenuation: NewVec3[float32](1, 1, 1),
 	}, true
 }

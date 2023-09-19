@@ -77,9 +77,9 @@ func Sub[T Float](a, b Vec3[T]) Vec3[T] {
 }
 
 func (v *Vec3[T]) Div(in Vec3[T]) {
-	v.X *= 1 / in.X
-	v.Y *= 1 / in.Y
-	v.Z *= 1 / in.Z
+	v.X /= in.X
+	v.Y /= in.Y
+	v.Z /= in.Z
 }
 
 func Div[T Float](a, b Vec3[T]) Vec3[T] {
@@ -181,21 +181,12 @@ func NewVec3RandInHemisphereOfSurroundingUnitSphere32(norm Vec3[float32]) Vec3[f
 }
 
 func reflect(v, n Vec3[float32]) Vec3[float32] {
-	length := 2 * Dot(v, n)
-	n.Scale(length)
-	return Sub(v, n)
+	return Sub(v, Scale(n, 2*Dot(v, n)))
 }
 
-func refract(unitDir, n Vec3[float32], etaOEtaPrime float32) Vec3[float32] {
-	cosTheta := float32(math.Min(float64(Dot(Scale(unitDir, -1), n)), 1.0))
-
-	perp := n.Cpy()
-	perp.Scale(cosTheta)
-	perp.Add(unitDir)
-	perp.Scale(etaOEtaPrime)
-
-	parallel := n.Cpy()
-	parallel.Scale(-1 * float32(math.Sqrt(math.Abs(float64(1.0-perp.LenSq())))))
-
-	return Add(perp, parallel)
+func refract(uv, n Vec3[float32], etaOEtaPrime float32) Vec3[float32] {
+	cosTheta := Dot(Scale(uv, -1), n)
+	perp := Scale(Add(uv, Scale(n, cosTheta)), etaOEtaPrime)
+	par := Scale(n, -1*float32(math.Sqrt(math.Abs(float64(1.0-perp.LenSq())))))
+	return Add(par, perp)
 }
