@@ -1,6 +1,8 @@
 package internal
 
-import "math"
+import (
+	"math"
+)
 
 type Hittable interface {
 	Hit(r *Ray, tMin, tMax float32) (HitInfo, bool)
@@ -14,13 +16,18 @@ type HitInfo struct {
 	frontFace bool
 }
 
-func (hi *HitInfo) SetFaceNormal(r *Ray, unitOutwardNormal Vec3[float32]) {
-	frontFace := Dot(r.dir, unitOutwardNormal) < 0
-	hi.frontFace = frontFace
-	if frontFace {
-		hi.normal = unitOutwardNormal
-	} else {
-		hi.normal = Scale(unitOutwardNormal, -1)
+func NewHitInfo(t float32, intersectingRayDirection, point, unitOutwardNormal Vec3[float32], material Material) HitInfo {
+	frontFace := Dot(intersectingRayDirection, unitOutwardNormal) < 0
+	if !frontFace {
+		unitOutwardNormal.Scale(-1)
+	}
+
+	return HitInfo{
+		point:     point,
+		normal:    unitOutwardNormal,
+		t:         t,
+		material:  material,
+		frontFace: frontFace,
 	}
 }
 
@@ -74,16 +81,11 @@ func (s *Sphere) Hit(r *Ray, tMin float32, tMax float32) (HitInfo, bool) {
 	}
 
 	point := r.At(t)
-	norm := Scale(Sub(point, s.Center), 1/s.Radius)
+	norm := Scale(Sub(point, s.Center), s.Radius)
+	norm.Unit()
 
-	hi := HitInfo{
-		point:    point,
-		normal:   norm,
-		t:        t,
-		material: s.Material,
-	}
+	hi := NewHitInfo(t, r.dir, point, norm, s.Material)
 
-	hi.SetFaceNormal(r, norm)
 	return hi, true
 
 }

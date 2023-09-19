@@ -45,7 +45,7 @@ func NewCamera(aspectRatio float32, imageWidth int) *Camera {
 func (c *Camera) init() {
 	c.once.Do(func() {
 		c.samplesPerPixel = 100.0
-		c.bounceDepth = 50.0
+		c.bounceDepth = 10.0
 		c.viewportHeight = float32(2.0)
 		c.imageHeight = float32(math.Floor(float64(c.imageWidth)) / float64(c.aspectRatio))
 		if c.imageHeight < 1 {

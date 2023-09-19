@@ -26,6 +26,11 @@ func main() {
 		},
 		&internal.Sphere{
 			Center:   internal.NewVec3[float32](-1, 0, -1),
+			Radius:   -0.4,
+			Material: &matLeft,
+		},
+		&internal.Sphere{
+			Center:   internal.NewVec3[float32](-1, 0, -1),
 			Radius:   0.5,
 			Material: &matLeft,
 		},

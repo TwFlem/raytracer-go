@@ -1,6 +1,9 @@
 package internal
 
-import "math/rand"
+import (
+	"math"
+	"math/rand"
+)
 
 type Float interface {
 	float32 | float64
@@ -26,4 +29,8 @@ func Clamp[T Float](min, max, val T) T {
 
 func RandF32N(min, max float32) float32 {
 	return min + rand.Float32()*(max-min)
+}
+
+func AbsF32(in float32) float32 {
+	return math.Float32frombits(math.Float32bits(in) &^ (1 << 31))
 }
