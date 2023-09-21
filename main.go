@@ -9,6 +9,9 @@ func main() {
 		16.0/9.0,
 		400.0,
 		internal.WithLookAt(internal.NewVec3[float32](-2, 2, 1)),
+		internal.WithFOVDegrees(20),
+		internal.WithDefocusAngleDegrees(10),
+		internal.WithFocusDist(3.4),
 	)
 
 	f, err := internal.Overwrite("out/img.ppm")

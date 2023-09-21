@@ -35,8 +35,10 @@ func AbsF32(in float32) float32 {
 	return math.Float32frombits(math.Float32bits(in) &^ (1 << 31))
 }
 
-func ToRadians(degrees float64) float64 {
-	return degrees * (math.Pi / 180.0)
+const radRatio float32 = math.Pi / 180.0
+
+func ToRadians(degrees float32) float32 {
+	return degrees * radRatio
 }
 
 const (

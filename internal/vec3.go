@@ -192,6 +192,15 @@ func NewVec3RandInHemisphereOfSurroundingUnitSphere32(norm Vec3[float32]) Vec3[f
 	return v
 }
 
+func NewVec3RandInUnitDisk() Vec3[float32] {
+	for {
+		v := NewVec3[float32](RandF32N(-1, 1), RandF32N(-1, 1), 0)
+		if v.LenSq() < 1 {
+			return v
+		}
+	}
+}
+
 func reflect(v, n Vec3[float32]) Vec3[float32] {
 	return Sub(v, Scale(n, 2*Dot(v, n)))
 }
