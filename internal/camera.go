@@ -38,9 +38,15 @@ type Camera struct {
 
 type CameraOpt func(*Camera)
 
-func WithFOV(fov float64) CameraOpt {
+func WithFOVRadians(fov float64) CameraOpt {
 	return func(c *Camera) {
 		c.fovRadians = fov
+	}
+}
+
+func WithFOVDegrees(fov float64) CameraOpt {
+	return func(c *Camera) {
+		c.fovRadians = ToRadians(fov)
 	}
 }
 

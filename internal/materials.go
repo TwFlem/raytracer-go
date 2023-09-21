@@ -48,7 +48,8 @@ func NewMetal(albedo Vec3[float32], fuzz float32) Metal {
 }
 
 func (m *Metal) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
-	reflected := reflect(hi.point, hi.normal)
+	unitDir := Unit(r.dir)
+	reflected := reflect(unitDir, hi.normal)
 
 	fuzz := NewVec3UnitRandOnUnitSphere32()
 	fuzz.Scale(m.fuzz)
