@@ -19,22 +19,57 @@ type Camera struct {
 	focalLength       float32
 	samplesPerPixel   int
 	bounceDepth       int
-	center            Vec3[float32]
 	viewportU         Vec3[float32]
 	viewportV         Vec3[float32]
-	viewportUHalf     Vec3[float32]
-	viewportVHalf     Vec3[float32]
 	pixelDu           Vec3[float32]
 	pixelDv           Vec3[float32]
 	viewportUpperLeft Vec3[float32]
 	pixel00           Vec3[float32]
+	center            Vec3[float32]
+	lookAt            Vec3[float32]
+	lookFrom          Vec3[float32]
+	vup               Vec3[float32]
+	u                 Vec3[float32]
+	v                 Vec3[float32]
+	w                 Vec3[float32]
+	fovRadians        float64
 	once              sync.Once
 }
 
-func NewCamera(aspectRatio float32, imageWidth int) *Camera {
+type CameraOpt func(*Camera)
+
+func WithFOV(fov float64) CameraOpt {
+	return func(c *Camera) {
+		c.fovRadians = fov
+	}
+}
+
+func WithLookAt(lookAt Vec3[float32]) CameraOpt {
+	return func(c *Camera) {
+		c.lookAt = lookAt
+	}
+}
+
+func WithLookFrom(lookFrom Vec3[float32]) CameraOpt {
+	return func(c *Camera) {
+		c.lookFrom = lookFrom
+	}
+}
+
+func NewCamera(aspectRatio float32, imageWidth int, opts ...CameraOpt) *Camera {
 	c := &Camera{
-		aspectRatio: aspectRatio,
-		imageWidth:  float32(imageWidth),
+		aspectRatio:     aspectRatio,
+		imageWidth:      float32(imageWidth),
+		fovRadians:      PiO2,
+		samplesPerPixel: 100,
+		bounceDepth:     50,
+		lookAt:          NewVec3[float32](0, 0, 0),
+		lookFrom:        NewVec3[float32](0, 0, -1),
+		vup:             NewVec3[float32](0, 1, 0),
+	}
+
+	for _, fn := range opts {
+		fn(c)
 	}
 
 	c.init()
@@ -44,41 +79,39 @@ func NewCamera(aspectRatio float32, imageWidth int) *Camera {
 
 func (c *Camera) init() {
 	c.once.Do(func() {
-		c.samplesPerPixel = 100.0
-		c.bounceDepth = 10.0
-		c.viewportHeight = float32(2.0)
+		c.center = c.lookAt.Cpy()
+
+		dist := Sub(c.lookFrom, c.lookAt)
+		c.focalLength = dist.Len()
+
+		h := float32(math.Tan(c.fovRadians / 2.0))
+		c.viewportHeight = 2.0 * h * c.focalLength
+
 		c.imageHeight = float32(math.Floor(float64(c.imageWidth)) / float64(c.aspectRatio))
 		if c.imageHeight < 1 {
 			c.imageHeight = 1
 		}
 		c.viewportWidth = c.viewportHeight * (float32(c.imageWidth) / float32(c.imageHeight))
 
-		c.focalLength = float32(1.0)
-		c.center = NewVec3[float32](0, 0, 0)
+		c.w = Unit(Scale(dist, -1))
+		c.u = Unit(Cross(c.vup, c.w))
+		c.v = Cross(c.w, c.u)
 
-		c.viewportU = NewVec3[float32](c.viewportWidth, 0, 0)
-		c.viewportV = NewVec3[float32](0, -c.viewportHeight, 0)
+		c.viewportU = Scale(c.u, c.viewportWidth)
+		c.viewportV = Scale(c.v, -c.viewportHeight)
 
 		c.pixelDu = c.viewportU.Cpy()
 		c.pixelDu.Scale(1 / float32(c.imageWidth))
 		c.pixelDv = c.viewportV.Cpy()
 		c.pixelDv.Scale(1 / c.imageHeight)
 
-		c.viewportUHalf = c.viewportU.Cpy()
-		c.viewportUHalf.Scale(0.5)
-		c.viewportVHalf = c.viewportV.Cpy()
-		c.viewportVHalf.Scale(0.5)
-
 		c.viewportUpperLeft = c.center.Cpy()
-		c.viewportUpperLeft.Sub(NewVec3[float32](0, 0, c.focalLength))
-		c.viewportUpperLeft.Sub(c.viewportUHalf)
-		c.viewportUpperLeft.Sub(c.viewportVHalf)
+		c.viewportUpperLeft.Sub(Scale(c.w, c.focalLength))
+		c.viewportUpperLeft.Sub(Scale(c.viewportU, 0.5))
+		c.viewportUpperLeft.Sub(Scale(c.viewportV, 0.5))
 
-		c.pixel00 = NewVec3[float32](0, 0, 0)
-		c.pixel00.Add(c.pixelDu)
-		c.pixel00.Add(c.pixelDv)
-		c.pixel00.Scale(0.5)
-		c.pixel00.Add(c.viewportUpperLeft)
+		c.pixel00 = c.viewportUpperLeft.Cpy()
+		c.pixel00.Add(Scale(Add(c.pixelDu, c.pixelDv), 0.5))
 	})
 }
 

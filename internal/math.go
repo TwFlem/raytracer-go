@@ -34,3 +34,7 @@ func RandF32N(min, max float32) float32 {
 func AbsF32(in float32) float32 {
 	return math.Float32frombits(math.Float32bits(in) &^ (1 << 31))
 }
+
+const (
+	PiO2 float64 = math.Pi / 2
+)

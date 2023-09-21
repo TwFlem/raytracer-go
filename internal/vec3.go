@@ -116,10 +116,22 @@ func (v *Vec3[T]) LenSq() T {
 	return v.X*v.X + v.Y*v.Y + v.Z*v.Z
 }
 
+func (v *Vec3[T]) Len() T {
+	return T(math.Sqrt(float64(v.LenSq())))
+}
+
 func (v *Vec3[T]) Cross(l, r Vec3[T]) {
 	v.X = l.Y*r.Z - l.Z*r.Y
 	v.Y = l.Z*r.X - l.X*r.Z
 	v.Z = l.X*r.Y - l.Y*r.X
+}
+
+func Cross[T Float](l, r Vec3[T]) Vec3[T] {
+	v := NewVec3Zero[T]()
+	v.X = l.Y*r.Z - l.Z*r.Y
+	v.Y = l.Z*r.X - l.X*r.Z
+	v.Z = l.X*r.Y - l.Y*r.X
+	return v
 }
 
 func Dot[T Float](l, r Vec3[T]) T {
