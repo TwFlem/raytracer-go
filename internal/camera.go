@@ -41,6 +41,18 @@ type Camera struct {
 
 type CameraOpt func(*Camera)
 
+func WithSamplesPerPixel(samples int) CameraOpt {
+	return func(c *Camera) {
+		c.samplesPerPixel = samples
+	}
+}
+
+func WithMaxRayDepth(depth int) CameraOpt {
+	return func(c *Camera) {
+		c.bounceDepth = depth
+	}
+}
+
 func WithFOVDegrees(fov float32) CameraOpt {
 	return func(c *Camera) {
 		c.fovRadians = ToRadians(fov)
@@ -96,7 +108,7 @@ func NewCamera(aspectRatio float32, imageWidth int, opts ...CameraOpt) *Camera {
 
 func (c *Camera) init() {
 	c.once.Do(func() {
-		c.center = c.lookAt.Cpy()
+		c.center = c.lookFrom.Cpy()
 
 		dist := Sub(c.lookFrom, c.lookAt)
 
@@ -109,7 +121,7 @@ func (c *Camera) init() {
 		}
 		c.viewportWidth = c.viewportHeight * (float32(c.imageWidth) / float32(c.imageHeight))
 
-		c.w = Unit(Scale(dist, -1))
+		c.w = Unit(dist)
 		c.u = Unit(Cross(c.vup, c.w))
 		c.v = Cross(c.w, c.u)
 
