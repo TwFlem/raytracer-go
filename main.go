@@ -1,14 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"raytracer/internal"
+	"time"
 )
 
 func main() {
+	now := time.Now()
 	camera := internal.NewCamera(
 		16.0/9.0,
-		400.0,
+		1200.0,
 		internal.WithSamplesPerPixel(50),
 		internal.WithMaxRayDepth(50),
 		internal.WithLookFrom(internal.NewVec3[float32](13, 2, 3)),
@@ -91,4 +94,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Println("Finished in: " + time.Since(now).String())
 }
