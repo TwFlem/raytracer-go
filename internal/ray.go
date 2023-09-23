@@ -21,17 +21,42 @@ func (r *Ray) At(t float32) Vec3[float32] {
 	return dir
 }
 
-func (r *Ray) GetColor(world *World, remainingBounces int) Vec3[float32] {
-	if remainingBounces == 0 {
-		return NewVec3Zero[float32]()
+type GetColorInfo struct {
+	color   Vec3[float32]
+	nextRay *Ray
+}
+
+func (r *Ray) GetColor(world *World, maxDepth int) Vec3[float32] {
+	initColorInfo := getNextColor(r, world)
+	color := initColorInfo.color
+	if initColorInfo.nextRay != nil {
+		nextRay := initColorInfo.nextRay
+		bounce := 1
+		for nextRay != nil && bounce < maxDepth {
+			cInfo := getNextColor(nextRay, world)
+			color.Mul(cInfo.color)
+			nextRay = cInfo.nextRay
+			bounce++
+		}
+		if bounce >= maxDepth {
+			return NewVec3Zero[float32]()
+		}
 	}
+	return color
+}
+
+func getNextColor(r *Ray, world *World) GetColorInfo {
 	if hitInfo, ok := world.Hit(r, 0.001, float32(math.Inf(1))); ok {
 		if scatterInfo, ok := hitInfo.material.Scatter(r, hitInfo); ok {
-			color := scatterInfo.ray.GetColor(world, remainingBounces-1)
-			color.Mul(scatterInfo.attenuation)
-			return color
+			return GetColorInfo{
+				color:   scatterInfo.attenuation,
+				nextRay: &scatterInfo.ray,
+			}
 		}
-		return NewVec3[float32](0, 0, 0)
+		return GetColorInfo{
+			color:   NewVec3Zero[float32](),
+			nextRay: nil,
+		}
 	}
 
 	unit := Unit(r.dir)
@@ -40,5 +65,9 @@ func (r *Ray) GetColor(world *World, remainingBounces int) Vec3[float32] {
 	white := NewVec3[float32](1, 1, 1)
 	blue := NewVec3[float32](0.5, 0.7, 1)
 
-	return Add(Scale(white, (1.0-a)), Scale(blue, a))
+	sky := Add(Scale(white, (1.0-a)), Scale(blue, a))
+	return GetColorInfo{
+		color:   sky,
+		nextRay: nil,
+	}
 }

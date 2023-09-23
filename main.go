@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"raytracer/internal"
+	"runtime/pprof"
 	"time"
 )
 
@@ -11,7 +12,7 @@ func main() {
 	now := time.Now()
 	camera := internal.NewCamera(
 		16.0/9.0,
-		1200.0,
+		400.0,
 		internal.WithSamplesPerPixel(50),
 		internal.WithMaxRayDepth(50),
 		internal.WithLookFrom(internal.NewVec3[float32](13, 2, 3)),
@@ -20,6 +21,18 @@ func main() {
 		internal.WithDefocusAngleDegrees(0.6),
 		internal.WithFocusDist(10),
 	)
+
+	cpuPprofF, err := internal.Overwrite("out/cpu.pprof")
+	if err != nil {
+		panic(err)
+	}
+	defer cpuPprofF.Close()
+
+	MemPprofF, err := internal.Overwrite("out/mem.pprof")
+	if err != nil {
+		panic(err)
+	}
+	defer MemPprofF.Close()
 
 	f, err := internal.Overwrite("out/img.ppm")
 	if err != nil {
@@ -90,10 +103,13 @@ func main() {
 
 	world := internal.NewWorld(hittables)
 
+	pprof.StartCPUProfile(cpuPprofF)
 	err = camera.Render(world, f)
 	if err != nil {
 		panic(err)
 	}
+	pprof.StopCPUProfile()
+	pprof.WriteHeapProfile(MemPprofF)
 
 	fmt.Println("Finished in: " + time.Since(now).String())
 }
