@@ -5,11 +5,17 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
+
+// CameraWorker workers that concurrently generate colors of pixels
+type CameraWorker struct {
+	rand *rand.Rand
+}
 
 type Camera struct {
 	aspectRatio         float32
@@ -37,6 +43,7 @@ type Camera struct {
 	defocusDiskU        Vec3[float32]
 	defocusDiskV        Vec3[float32]
 	fovRadians          float32
+	workers             chan *CameraWorker
 	once                sync.Once
 }
 
@@ -145,6 +152,17 @@ func (c *Camera) init() {
 		defocusRadius := c.focusDistance * float32(math.Tan(float64(c.defocusAngleRadians/2.0)))
 		c.defocusDiskU = Scale(c.u, defocusRadius)
 		c.defocusDiskV = Scale(c.v, defocusRadius)
+
+		numWorkers := runtime.NumCPU() * 5
+		c.workers = make(chan *CameraWorker, numWorkers)
+		for i := 0; i < numWorkers; i++ {
+			src := rand.NewSource(time.Now().UnixNano())
+			randCtx := rand.New(src)
+			c.workers <- &CameraWorker{
+				rand: randCtx,
+			}
+		}
+
 	})
 }
 
@@ -180,11 +198,13 @@ func (c *Camera) GetPixelColor(world *World, i, j int) <-chan Vec3[float32] {
 			var wg sync.WaitGroup
 			wg.Add(c.samplesPerPixel)
 			for k := 0; k < c.samplesPerPixel; k++ {
-				go func() {
-					ray := c.GetRay(i, j)
+				cameraWorker := <-c.workers
+				go func(cw *CameraWorker) {
+					ray := c.GetRay(cw, i, j)
 					samplesOut <- ray.GetColor(world, c.bounceDepth)
+					c.workers <- cw
 					wg.Done()
-				}()
+				}(cameraWorker)
 			}
 			wg.Wait()
 			close(samplesOut)
@@ -202,10 +222,7 @@ func (c *Camera) GetPixelColor(world *World, i, j int) <-chan Vec3[float32] {
 
 }
 
-func (c *Camera) GetRay(i, j int) *Ray {
-	src := rand.NewSource(time.Now().UnixNano())
-	randCtx := rand.New(src)
-
+func (c *Camera) GetRay(cw *CameraWorker, i, j int) *Ray {
 	duOffset := c.pixelDu.Cpy()
 	duOffset.Scale(float32(i))
 
@@ -215,9 +232,9 @@ func (c *Camera) GetRay(i, j int) *Ray {
 	pixelCenter := c.pixel00.Cpy()
 	pixelCenter.Add(duOffset)
 	pixelCenter.Add(dvOffset)
-	pixelCenter.Add(c.sampleUnitSquare(randCtx))
+	pixelCenter.Add(c.sampleUnitSquare(cw.rand))
 
-	discSample := NewVec3RandInUnitDisk(randCtx)
+	discSample := NewVec3RandInUnitDisk(cw.rand)
 	origin := c.center.Cpy()
 	if c.defocusAngleRadians > 0 {
 		origin = Add(c.center, Add(Scale(c.defocusDiskU, discSample.X), Scale(c.defocusDiskV, discSample.Y)))
@@ -226,7 +243,7 @@ func (c *Camera) GetRay(i, j int) *Ray {
 	rayDir := pixelCenter.Cpy()
 	rayDir.Sub(origin)
 
-	return NewRay(origin, rayDir, randCtx)
+	return NewRay(origin, rayDir, cw.rand)
 }
 
 func (c *Camera) sampleUnitSquare(randCtx *rand.Rand) Vec3[float32] {
