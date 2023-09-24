@@ -172,20 +172,54 @@ func (c *Camera) Render(world *World, writer io.Writer) error {
 	ppm := []string{
 		"P3",
 		strconv.Itoa(w) + " " + strconv.Itoa(h),
-		"255",
+		"255\n",
 	}
-	for j := 0; j < h; j++ {
-		fmt.Printf("coloring line %d out of %d\n", j+1, h)
-		for i := 0; i < w; i++ {
-			sampleOut := c.GetPixelColor(world, i, j)
-
-			sample := <-sampleOut
-			ppm = append(ppm, sample.String())
-		}
-	}
-
 	_, err := io.WriteString(writer, strings.Join(ppm, "\n"))
-	return err
+	if err != nil {
+		return err
+	}
+
+	chunksIn := make(chan []string)
+	chunkResultOut := c.StartChunkRenderer(writer, chunksIn)
+
+	// TODO: add real error handing if a chunk write fails or any other kind of error
+	go func() {
+		for j := 0; j < h; j++ {
+			fmt.Printf("coloring line %d out of %d\n", j+1, h)
+			chunk := make([]string, w)
+			for i := 0; i < w; i++ {
+				sampleOut := c.GetPixelColor(world, i, j)
+				sample := <-sampleOut
+				chunk[i] = sample.String()
+			}
+			chunksIn <- chunk
+		}
+		close(chunksIn)
+	}()
+
+	res := <-chunkResultOut
+	return res.err
+}
+
+type RenderChunkResult struct {
+	err error
+}
+
+func (c *Camera) StartChunkRenderer(writer io.Writer, chunksIn chan []string) <-chan RenderChunkResult {
+	out := make(chan RenderChunkResult)
+	go func() {
+		for c := range chunksIn {
+			_, err := io.WriteString(writer, strings.Join(c, "\n")+"\n")
+			if err != nil {
+				out <- RenderChunkResult{err: err}
+				break
+			}
+		}
+		out <- RenderChunkResult{err: nil}
+		close(out)
+	}()
+	return out
+
 }
 
 func (c *Camera) GetPixelColor(world *World, i, j int) <-chan Vec3[float32] {
