@@ -12,7 +12,7 @@ func main() {
 	now := time.Now()
 	camera := internal.NewCamera(
 		16.0/9.0,
-		400.0,
+		1200.0,
 		internal.WithSamplesPerPixel(500),
 		internal.WithMaxRayDepth(50),
 		internal.WithLookFrom(internal.NewVec3[float32](13, 2, 3)),

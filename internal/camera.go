@@ -153,7 +153,7 @@ func (c *Camera) init() {
 		c.defocusDiskU = Scale(c.u, defocusRadius)
 		c.defocusDiskV = Scale(c.v, defocusRadius)
 
-		numWorkers := runtime.NumCPU() * 5
+		numWorkers := runtime.NumCPU() * 2
 		c.workers = make(chan *CameraWorker, numWorkers)
 		for i := 0; i < numWorkers; i++ {
 			src := rand.NewSource(time.Now().UnixNano())
@@ -179,14 +179,17 @@ func (c *Camera) Render(world *World, writer io.Writer) error {
 		return err
 	}
 
-	chunksIn := make(chan []string)
+	chunksIn := make(chan []string, 50)
 	chunkResultOut := c.StartChunkRenderer(writer, chunksIn)
 
 	// TODO: add real error handing if a chunk write fails or any other kind of error
+	// TODO: make a png or something instead of ppm
+	// TODO: write fixed sized chunks
+	// TODO: give worker contexts arenas for allocations
 	go func() {
+		chunk := make([]string, w)
 		for j := 0; j < h; j++ {
 			fmt.Printf("coloring line %d out of %d\n", j+1, h)
-			chunk := make([]string, w)
 			for i := 0; i < w; i++ {
 				sampleOut := c.GetPixelColor(world, i, j)
 				sample := <-sampleOut
