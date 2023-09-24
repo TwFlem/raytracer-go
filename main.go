@@ -50,6 +50,8 @@ func main() {
 		},
 	}
 
+	src := rand.NewSource(time.Now().Unix())
+	randCtx := rand.New(src)
 	p := internal.NewVec3[float32](4, 0.2, 0)
 	for i := -11; i < 11; i++ {
 		for j := -11; j < 11; j++ {
@@ -64,12 +66,12 @@ func main() {
 					Radius: 0.2,
 				}
 				if matPer < 0.8 {
-					albedo := internal.Mul(internal.NewVec3Rand32(), internal.NewVec3Rand32())
+					albedo := internal.Mul(internal.NewVec3Rand32(randCtx), internal.NewVec3Rand32(randCtx))
 					mat := internal.NewLambertian(albedo)
 					sphere.Material = &mat
 				} else if matPer < 0.95 {
-					albedo := internal.NewVec3RandRange32(0.5, 1)
-					fuzz := internal.RandF32N(0, 0.5)
+					albedo := internal.NewVec3RandRange32(randCtx, 0.5, 1)
+					fuzz := internal.RandF32N(randCtx, 0, 0.5)
 					mat := internal.NewMetal(albedo, fuzz)
 					sphere.Material = &mat
 				} else {

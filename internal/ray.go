@@ -1,16 +1,21 @@
 package internal
 
-import "math"
+import (
+	"math"
+	"math/rand"
+)
 
 type Ray struct {
 	origin Vec3[float32]
 	dir    Vec3[float32]
+	rand   *rand.Rand
 }
 
-func NewRay(origin, dir Vec3[float32]) *Ray {
+func NewRay(origin, dir Vec3[float32], randCtx *rand.Rand) *Ray {
 	return &Ray{
 		origin: origin,
 		dir:    dir,
+		rand:   randCtx,
 	}
 }
 

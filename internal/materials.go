@@ -25,12 +25,12 @@ func NewLambertian(albedo Vec3[float32]) Lambertian {
 }
 
 func (l *Lambertian) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
-	dir := Add(hi.normal, NewVec3UnitRandOnUnitSphere32())
+	dir := Add(hi.normal, NewVec3UnitRandOnUnitSphere32(r.rand))
 	if dir.NearZero() {
 		dir = hi.normal
 	}
 	return ScatterInfo{
-		ray:         *NewRay(hi.point, dir),
+		ray:         *NewRay(hi.point, dir, r.rand),
 		attenuation: l.albedo,
 	}, true
 }
@@ -51,13 +51,13 @@ func (m *Metal) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 	unitDir := Unit(r.dir)
 	reflected := reflect(unitDir, hi.normal)
 
-	fuzz := NewVec3UnitRandOnUnitSphere32()
+	fuzz := NewVec3UnitRandOnUnitSphere32(r.rand)
 	fuzz.Scale(m.fuzz)
 
 	scattered := Add(reflected, fuzz)
 	if Dot(scattered, hi.normal) > 0 {
 		return ScatterInfo{
-			ray:         *NewRay(hi.point, scattered),
+			ray:         *NewRay(hi.point, scattered, r.rand),
 			attenuation: m.albedo,
 		}, true
 	}
@@ -93,7 +93,7 @@ func (d *Dielectric) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 	}
 
 	return ScatterInfo{
-		ray:         *NewRay(hi.point, direction),
+		ray:         *NewRay(hi.point, direction, r.rand),
 		attenuation: NewVec3[float32](1, 1, 1),
 	}, true
 }

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Camera struct {
@@ -156,17 +157,11 @@ func (c *Camera) Render(world *World, writer io.Writer) error {
 		"255",
 	}
 	for j := 0; j < h; j++ {
-		fmt.Printf("computing %d of %d\n", j, h-1)
+		fmt.Printf("coloring line %d out of %d\n", j+1, h)
 		for i := 0; i < w; i++ {
-			sample := NewVec3Zero[float32]()
-			for k := 0; k < c.samplesPerPixel; k++ {
-				ray := c.GetRay(i, j)
-				sample.Add(ray.GetColor(world, c.bounceDepth))
-			}
-			sample.Scale(1.0 / float32(c.samplesPerPixel))
-			sample.ToGamma2()
-			sample.ToRGB()
+			sampleOut := c.GetPixelColor(world, i, j)
 
+			sample := <-sampleOut
 			ppm = append(ppm, sample.String())
 		}
 	}
@@ -175,7 +170,42 @@ func (c *Camera) Render(world *World, writer io.Writer) error {
 	return err
 }
 
+func (c *Camera) GetPixelColor(world *World, i, j int) <-chan Vec3[float32] {
+	out := make(chan Vec3[float32])
+	go func() {
+		defer close(out)
+		sample := NewVec3Zero[float32]()
+		samplesOut := make(chan Vec3[float32])
+		go func() {
+			var wg sync.WaitGroup
+			wg.Add(c.samplesPerPixel)
+			for k := 0; k < c.samplesPerPixel; k++ {
+				go func() {
+					ray := c.GetRay(i, j)
+					samplesOut <- ray.GetColor(world, c.bounceDepth)
+					wg.Done()
+				}()
+			}
+			wg.Wait()
+			close(samplesOut)
+		}()
+		for s := range samplesOut {
+			sample.Add(s)
+		}
+		sample.Scale(1.0 / float32(c.samplesPerPixel))
+		sample.ToGamma2()
+		sample.ToRGB()
+		out <- sample
+	}()
+
+	return out
+
+}
+
 func (c *Camera) GetRay(i, j int) *Ray {
+	src := rand.NewSource(time.Now().UnixNano())
+	randCtx := rand.New(src)
+
 	duOffset := c.pixelDu.Cpy()
 	duOffset.Scale(float32(i))
 
@@ -185,9 +215,9 @@ func (c *Camera) GetRay(i, j int) *Ray {
 	pixelCenter := c.pixel00.Cpy()
 	pixelCenter.Add(duOffset)
 	pixelCenter.Add(dvOffset)
-	pixelCenter.Add(c.sampleUnitSquare())
+	pixelCenter.Add(c.sampleUnitSquare(randCtx))
 
-	discSample := NewVec3RandInUnitDisk()
+	discSample := NewVec3RandInUnitDisk(randCtx)
 	origin := c.center.Cpy()
 	if c.defocusAngleRadians > 0 {
 		origin = Add(c.center, Add(Scale(c.defocusDiskU, discSample.X), Scale(c.defocusDiskV, discSample.Y)))
@@ -196,12 +226,12 @@ func (c *Camera) GetRay(i, j int) *Ray {
 	rayDir := pixelCenter.Cpy()
 	rayDir.Sub(origin)
 
-	return NewRay(origin, rayDir)
+	return NewRay(origin, rayDir, randCtx)
 }
 
-func (c *Camera) sampleUnitSquare() Vec3[float32] {
-	dx := -0.5 + rand.Float32()
-	dy := -0.5 + rand.Float32()
+func (c *Camera) sampleUnitSquare(randCtx *rand.Rand) Vec3[float32] {
+	dx := -0.5 + randCtx.Float32()
+	dy := -0.5 + randCtx.Float32()
 
 	du := c.pixelDu.Cpy()
 	du.Scale(dx)

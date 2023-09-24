@@ -27,8 +27,8 @@ func Clamp[T Float](min, max, val T) T {
 	return val
 }
 
-func RandF32N(min, max float32) float32 {
-	return min + rand.Float32()*(max-min)
+func RandF32N(randCtx *rand.Rand, min, max float32) float32 {
+	return min + randCtx.Float32()*(max-min)
 }
 
 func AbsF32(in float32) float32 {

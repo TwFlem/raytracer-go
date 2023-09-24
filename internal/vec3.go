@@ -163,17 +163,17 @@ func (v *Vec3[T]) NearZero() bool {
 	return T(math.Abs(float64(v.X))) < T(nearZeroEpsilon) && T(math.Abs(float64(v.Y))) < T(nearZeroEpsilon) && T(math.Abs(float64(v.Z))) < T(nearZeroEpsilon)
 }
 
-func NewVec3Rand32() Vec3[float32] {
-	return NewVec3[float32](rand.Float32(), rand.Float32(), rand.Float32())
+func NewVec3Rand32(randCtx *rand.Rand) Vec3[float32] {
+	return NewVec3[float32](randCtx.Float32(), randCtx.Float32(), randCtx.Float32())
 }
 
-func NewVec3RandRange32(min, max float32) Vec3[float32] {
-	return NewVec3[float32](RandF32N(min, max), RandF32N(min, max), RandF32N(min, max))
+func NewVec3RandRange32(randCtx *rand.Rand, min, max float32) Vec3[float32] {
+	return NewVec3[float32](RandF32N(randCtx, min, max), RandF32N(randCtx, min, max), RandF32N(randCtx, min, max))
 }
 
-func NewVec3UnitRandOnUnitSphere32() Vec3[float32] {
+func NewVec3UnitRandOnUnitSphere32(randCtx *rand.Rand) Vec3[float32] {
 	for {
-		v := NewVec3RandRange32(-1, 1)
+		v := NewVec3RandRange32(randCtx, -1, 1)
 		if v.LenSq() < 1.0 {
 			v.Unit()
 			return v
@@ -183,8 +183,8 @@ func NewVec3UnitRandOnUnitSphere32() Vec3[float32] {
 
 // NewVec3RandInHemisphereOfSurroundingUnitSphere32 gives a random vector that lies on a unit sphere that is in the same
 // hemisphere as the surface normal provided
-func NewVec3RandInHemisphereOfSurroundingUnitSphere32(norm Vec3[float32]) Vec3[float32] {
-	v := NewVec3UnitRandOnUnitSphere32()
+func NewVec3RandInHemisphereOfSurroundingUnitSphere32(randCtx *rand.Rand, norm Vec3[float32]) Vec3[float32] {
+	v := NewVec3UnitRandOnUnitSphere32(randCtx)
 	if Dot(v, norm) < 0 {
 		v.Scale(-1)
 		return v
@@ -192,9 +192,9 @@ func NewVec3RandInHemisphereOfSurroundingUnitSphere32(norm Vec3[float32]) Vec3[f
 	return v
 }
 
-func NewVec3RandInUnitDisk() Vec3[float32] {
+func NewVec3RandInUnitDisk(randCtx *rand.Rand) Vec3[float32] {
 	for {
-		v := NewVec3[float32](RandF32N(-1, 1), RandF32N(-1, 1), 0)
+		v := NewVec3[float32](RandF32N(randCtx, -1, 1), RandF32N(randCtx, -1, 1), 0)
 		if v.LenSq() < 1 {
 			return v
 		}
