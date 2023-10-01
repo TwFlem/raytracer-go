@@ -3,17 +3,20 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"raytracer/internal"
 	"runtime/pprof"
 	"time"
 )
 
+const profileEnabled = false
+
 func main() {
 	now := time.Now()
 	camera := internal.NewCamera(
 		16.0/9.0,
-		1200.0,
-		internal.WithSamplesPerPixel(500),
+		400.0,
+		internal.WithSamplesPerPixel(50),
 		internal.WithMaxRayDepth(50),
 		internal.WithLookFrom(internal.NewVec3[float32](13, 2, 3)),
 		internal.WithLookAt(internal.NewVec3[float32](0, 0, 0)),
@@ -22,17 +25,23 @@ func main() {
 		internal.WithFocusDist(10),
 	)
 
-	cpuPprofF, err := internal.Overwrite("out/cpu.pprof")
-	if err != nil {
-		panic(err)
-	}
-	defer cpuPprofF.Close()
+	var cpuPprofF *os.File
+	var MemPprofF *os.File
+	var pprofErr error
+	if profileEnabled {
+		cpuPprofF, pprofErr = internal.Overwrite("out/cpu.pprof")
+		if pprofErr != nil {
+			panic(pprofErr)
+		}
+		defer cpuPprofF.Close()
 
-	MemPprofF, err := internal.Overwrite("out/mem.pprof")
-	if err != nil {
-		panic(err)
+		MemPprofF, pprofErr = internal.Overwrite("out/mem.pprof")
+		if pprofErr != nil {
+			panic(pprofErr)
+		}
+		defer MemPprofF.Close()
+
 	}
-	defer MemPprofF.Close()
 
 	f, err := internal.Overwrite("out/img.ppm")
 	if err != nil {
@@ -105,13 +114,16 @@ func main() {
 
 	world := internal.NewWorld(hittables)
 
-	pprof.StartCPUProfile(cpuPprofF)
+	if profileEnabled {
+		pprof.StartCPUProfile(cpuPprofF)
+	}
 	err = camera.Render(world, f)
 	if err != nil {
 		panic(err)
 	}
-	pprof.StopCPUProfile()
-	pprof.WriteHeapProfile(MemPprofF)
-
+	if profileEnabled {
+		pprof.StopCPUProfile()
+		pprof.WriteHeapProfile(MemPprofF)
+	}
 	fmt.Println("Finished in: " + time.Since(now).String())
 }
