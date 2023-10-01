@@ -65,10 +65,10 @@ func getNextColor(r *Ray, world *World) GetColorInfo {
 	}
 
 	unit := Unit(r.dir)
-	a := 0.5 * (unit.Y + 1)
+	a := 0.5 * (unit.D[1] + 1)
 
-	white := NewVec3(1, 1, 1)
-	blue := NewVec3(0.5, 0.7, 1)
+	white := NewVec3(1, 1, 1, 0)
+	blue := NewVec3(0.5, 0.7, 1, 0)
 
 	sky := Add(Scale(white, (1.0-a)), Scale(blue, a))
 	return GetColorInfo{

@@ -7,33 +7,19 @@ import (
 )
 
 type Vec3 struct {
-	X float32
-	Y float32
-	Z float32
+	D [4]float32
 }
 
-func NewVec3(x, y, z float32) Vec3 {
-	return Vec3{
-		X: x,
-		Y: y,
-		Z: z,
-	}
+func NewVec3(x, y, z, a float32) Vec3 {
+	return Vec3{[4]float32{x, y, z, a}}
 }
 
 func NewVec3Zero() Vec3 {
-	return Vec3{
-		X: 0,
-		Y: 0,
-		Z: 0,
-	}
+	return Vec3{[4]float32{0, 0, 0, 0}}
 }
 
 func NewVec3Unit() Vec3 {
-	return Vec3{
-		X: 1,
-		Y: 1,
-		Z: 1,
-	}
+	return Vec3{[4]float32{1, 1, 1, 1}}
 }
 
 func (v *Vec3) Cpy() Vec3 {
@@ -41,9 +27,9 @@ func (v *Vec3) Cpy() Vec3 {
 }
 
 func (v *Vec3) Add(in Vec3) {
-	v.X += in.X
-	v.Y += in.Y
-	v.Z += in.Z
+	v.D[0] += in.D[0]
+	v.D[1] += in.D[1]
+	v.D[2] += in.D[2]
 }
 
 func Add(a, b Vec3) Vec3 {
@@ -53,9 +39,9 @@ func Add(a, b Vec3) Vec3 {
 }
 
 func (v *Vec3) Mul(in Vec3) {
-	v.X *= in.X
-	v.Y *= in.Y
-	v.Z *= in.Z
+	v.D[0] *= in.D[0]
+	v.D[1] *= in.D[1]
+	v.D[2] *= in.D[2]
 }
 
 func Mul(a, b Vec3) Vec3 {
@@ -65,9 +51,9 @@ func Mul(a, b Vec3) Vec3 {
 }
 
 func (v *Vec3) Sub(in Vec3) {
-	v.X -= in.X
-	v.Y -= in.Y
-	v.Z -= in.Z
+	v.D[0] -= in.D[0]
+	v.D[1] -= in.D[1]
+	v.D[2] -= in.D[2]
 }
 
 func Sub(a, b Vec3) Vec3 {
@@ -77,9 +63,9 @@ func Sub(a, b Vec3) Vec3 {
 }
 
 func (v *Vec3) Div(in Vec3) {
-	v.X /= in.X
-	v.Y /= in.Y
-	v.Z /= in.Z
+	v.D[0] /= in.D[0]
+	v.D[1] /= in.D[1]
+	v.D[2] /= in.D[2]
 }
 
 func Div(a, b Vec3) Vec3 {
@@ -89,9 +75,9 @@ func Div(a, b Vec3) Vec3 {
 }
 
 func (v *Vec3) Scale(in float32) {
-	v.X *= in
-	v.Y *= in
-	v.Z *= in
+	v.D[0] *= in
+	v.D[1] *= in
+	v.D[2] *= in
 }
 
 func Scale(a Vec3, scaler float32) Vec3 {
@@ -113,7 +99,7 @@ func Unit(a Vec3) Vec3 {
 }
 
 func (v *Vec3) LenSq() float32 {
-	return v.X*v.X + v.Y*v.Y + v.Z*v.Z
+	return v.D[0]*v.D[0] + v.D[1]*v.D[1] + v.D[2]*v.D[2]
 }
 
 func (v *Vec3) Len() float32 {
@@ -121,54 +107,54 @@ func (v *Vec3) Len() float32 {
 }
 
 func (v *Vec3) Cross(l, r Vec3) {
-	v.X = l.Y*r.Z - l.Z*r.Y
-	v.Y = l.Z*r.X - l.X*r.Z
-	v.Z = l.X*r.Y - l.Y*r.X
+	v.D[0] = l.D[1]*r.D[2] - l.D[2]*r.D[1]
+	v.D[1] = l.D[2]*r.D[0] - l.D[0]*r.D[2]
+	v.D[2] = l.D[0]*r.D[1] - l.D[1]*r.D[0]
 }
 
 func Cross(l, r Vec3) Vec3 {
 	v := NewVec3Zero()
-	v.X = l.Y*r.Z - l.Z*r.Y
-	v.Y = l.Z*r.X - l.X*r.Z
-	v.Z = l.X*r.Y - l.Y*r.X
+	v.D[0] = l.D[1]*r.D[2] - l.D[2]*r.D[1]
+	v.D[1] = l.D[2]*r.D[0] - l.D[0]*r.D[2]
+	v.D[2] = l.D[0]*r.D[1] - l.D[1]*r.D[0]
 	return v
 }
 
 func Dot(l, r Vec3) float32 {
-	return l.X*r.X + l.Y*r.Y + l.Z*r.Z
+	return l.D[0]*r.D[0] + l.D[1]*r.D[1] + l.D[2]*r.D[2]
 }
 
 func (v *Vec3) String() string {
-	return fmt.Sprintf("%d %d %d", int(v.X), int(v.Y), int(v.Z))
+	return fmt.Sprintf("%d %d %d", int(v.D[0]), int(v.D[1]), int(v.D[2]))
 }
 
 func (v *Vec3) ToRGB() {
-	v.X = Clamp(0, 1, v.X)
-	v.Y = Clamp(0, 1, v.Y)
-	v.Z = Clamp(0, 1, v.Z)
-	v.X *= 255.999
-	v.Y *= 255.999
-	v.Z *= 255.999
+	v.D[0] = Clamp(0, 1, v.D[0])
+	v.D[1] = Clamp(0, 1, v.D[1])
+	v.D[2] = Clamp(0, 1, v.D[2])
+	v.D[0] *= 255.999
+	v.D[1] *= 255.999
+	v.D[2] *= 255.999
 }
 
 func (v *Vec3) ToGamma2() {
-	v.X = float32(math.Sqrt(float64(v.X)))
-	v.Y = float32(math.Sqrt(float64(v.Y)))
-	v.Z = float32(math.Sqrt(float64(v.Z)))
+	v.D[0] = float32(math.Sqrt(float64(v.D[0])))
+	v.D[1] = float32(math.Sqrt(float64(v.D[1])))
+	v.D[2] = float32(math.Sqrt(float64(v.D[2])))
 }
 
 const nearZeroEpsilon float32 = 1e-8
 
 func (v *Vec3) NearZero() bool {
-	return float32(math.Abs(float64(v.X))) < float32(nearZeroEpsilon) && float32(math.Abs(float64(v.Y))) < float32(nearZeroEpsilon) && float32(math.Abs(float64(v.Z))) < float32(nearZeroEpsilon)
+	return float32(math.Abs(float64(v.D[0]))) < float32(nearZeroEpsilon) && float32(math.Abs(float64(v.D[1]))) < float32(nearZeroEpsilon) && float32(math.Abs(float64(v.D[2]))) < float32(nearZeroEpsilon)
 }
 
 func NewVec3Rand32(randCtx *rand.Rand) Vec3 {
-	return NewVec3(randCtx.Float32(), randCtx.Float32(), randCtx.Float32())
+	return NewVec3(randCtx.Float32(), randCtx.Float32(), randCtx.Float32(), randCtx.Float32())
 }
 
 func NewVec3RandRange32(randCtx *rand.Rand, min, max float32) Vec3 {
-	return NewVec3(RandF32N(randCtx, min, max), RandF32N(randCtx, min, max), RandF32N(randCtx, min, max))
+	return NewVec3(RandF32N(randCtx, min, max), RandF32N(randCtx, min, max), RandF32N(randCtx, min, max), RandF32N(randCtx, min, max))
 }
 
 func NewVec3UnitRandOnUnitSphere32(randCtx *rand.Rand) Vec3 {
@@ -194,7 +180,7 @@ func NewVec3RandInHemisphereOfSurroundingUnitSphere32(randCtx *rand.Rand, norm V
 
 func NewVec3RandInUnitDisk(randCtx *rand.Rand) Vec3 {
 	for {
-		v := NewVec3(RandF32N(randCtx, -1, 1), RandF32N(randCtx, -1, 1), 0)
+		v := NewVec3(RandF32N(randCtx, -1, 1), RandF32N(randCtx, -1, 1), 0, 0)
 		if v.LenSq() < 1 {
 			return v
 		}

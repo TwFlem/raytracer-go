@@ -103,9 +103,9 @@ func NewCamera(aspectRatio float32, imageWidth int, opts ...CameraOpt) *Camera {
 		bounceDepth:         50,
 		focusDistance:       10,
 		defocusAngleRadians: 0,
-		lookAt:              NewVec3(0, 0, 0),
-		lookFrom:            NewVec3(0, 0, -1),
-		vup:                 NewVec3(0, 1, 0),
+		lookAt:              NewVec3(0, 0, 0, 0),
+		lookFrom:            NewVec3(0, 0, -1, 0),
+		vup:                 NewVec3(0, 1, 0, 0),
 	}
 
 	for _, fn := range opts {
@@ -268,7 +268,7 @@ func (c *Camera) GetRay(cw *CameraWorker, i, j int) *Ray {
 	discSample := NewVec3RandInUnitDisk(cw.rand)
 	origin := c.center.Cpy()
 	if c.defocusAngleRadians > 0 {
-		origin = Add(c.center, Add(Scale(c.defocusDiskU, discSample.X), Scale(c.defocusDiskV, discSample.Y)))
+		origin = Add(c.center, Add(Scale(c.defocusDiskU, discSample.D[0]), Scale(c.defocusDiskV, discSample.D[1])))
 	}
 
 	rayDir := pixelCenter.Cpy()

@@ -94,7 +94,7 @@ func (d *Dielectric) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 
 	return ScatterInfo{
 		ray:         *NewRay(hi.point, direction, r.rand),
-		attenuation: NewVec3(1, 1, 1),
+		attenuation: NewVec3(1, 1, 1, 0),
 	}, true
 }
 
