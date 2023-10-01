@@ -9,14 +9,14 @@ import (
 	"time"
 )
 
-const profileEnabled = false
+const profileEnabled = true
 
 func main() {
 	now := time.Now()
 	camera := internal.NewCamera(
 		16.0/9.0,
 		400.0,
-		internal.WithSamplesPerPixel(50),
+		internal.WithSamplesPerPixel(500),
 		internal.WithMaxRayDepth(50),
 		internal.WithLookFrom(internal.NewVec3[float32](13, 2, 3)),
 		internal.WithLookAt(internal.NewVec3[float32](0, 0, 0)),

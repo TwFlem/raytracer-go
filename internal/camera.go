@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"math"
@@ -10,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/TwFlem/pipe/stage"
 )
 
 // CameraWorker workers that concurrently generate colors of pixels
@@ -153,7 +156,7 @@ func (c *Camera) init() {
 		c.defocusDiskU = Scale(c.u, defocusRadius)
 		c.defocusDiskV = Scale(c.v, defocusRadius)
 
-		numWorkers := runtime.NumCPU() * 2
+		numWorkers := runtime.NumCPU()
 		c.workers = make(chan *CameraWorker, numWorkers)
 		for i := 0; i < numWorkers; i++ {
 			src := rand.NewSource(time.Now().UnixNano())
@@ -179,26 +182,38 @@ func (c *Camera) Render(world *World, writer io.Writer) error {
 		return err
 	}
 
-	chunksIn := make(chan []string, 50)
-	chunkResultOut := c.StartChunkRenderer(writer, chunksIn)
+	ctx := context.Background()
 
 	// TODO: add real error handing if a chunk write fails or any other kind of error
 	// TODO: make a png or something instead of ppm
-	// TODO: write fixed sized chunks
 	// TODO: give worker contexts arenas for allocations
+	colorsOut := make(chan (<-chan string), len(c.workers))
 	go func() {
-		chunk := make([]string, w)
+		defer close(colorsOut)
+		var wg sync.WaitGroup
 		for j := 0; j < h; j++ {
 			fmt.Printf("coloring line %d out of %d\n", j+1, h)
 			for i := 0; i < w; i++ {
-				sampleOut := c.GetPixelColor(world, i, j)
-				sample := <-sampleOut
-				chunk[i] = sample.String()
+				cw := <-c.workers
+				in := make(chan string)
+				wg.Add(1)
+				go func(innerWorld *World, innerIn chan string, innerCw *CameraWorker, innerI, innerJ int) {
+					defer close(innerIn)
+					col := c.GetPixelColor(innerWorld, innerCw, innerI, innerJ)
+					c.workers <- innerCw
+					innerIn <- col.String()
+					wg.Done()
+				}(world, in, cw, i, j)
+				colorsOut <- in
 			}
-			chunksIn <- chunk
 		}
-		close(chunksIn)
+		wg.Wait()
 	}()
+
+	orderedPixelsOut := stage.Bridge(ctx.Done(), colorsOut)
+	chunksOut := stage.Agg(ctx.Done(), orderedPixelsOut, 5000)
+	bufChunksOut := stage.Buf(ctx.Done(), chunksOut, 2)
+	chunkResultOut := c.StartChunkRenderer(writer, bufChunksOut)
 
 	res := <-chunkResultOut
 	return res.err
@@ -208,9 +223,10 @@ type RenderChunkResult struct {
 	err error
 }
 
-func (c *Camera) StartChunkRenderer(writer io.Writer, chunksIn chan []string) <-chan RenderChunkResult {
+func (c *Camera) StartChunkRenderer(writer io.Writer, chunksIn <-chan []string) <-chan RenderChunkResult {
 	out := make(chan RenderChunkResult)
 	go func() {
+		defer close(out)
 		for c := range chunksIn {
 			_, err := io.WriteString(writer, strings.Join(c, "\n")+"\n")
 			if err != nil {
@@ -219,44 +235,22 @@ func (c *Camera) StartChunkRenderer(writer io.Writer, chunksIn chan []string) <-
 			}
 		}
 		out <- RenderChunkResult{err: nil}
-		close(out)
 	}()
 	return out
 
 }
 
-func (c *Camera) GetPixelColor(world *World, i, j int) <-chan Vec3[float32] {
-	out := make(chan Vec3[float32])
-	go func() {
-		defer close(out)
-		sample := NewVec3Zero[float32]()
-		samplesOut := make(chan Vec3[float32])
-		go func() {
-			var wg sync.WaitGroup
-			wg.Add(c.samplesPerPixel)
-			for k := 0; k < c.samplesPerPixel; k++ {
-				cameraWorker := <-c.workers
-				go func(cw *CameraWorker) {
-					ray := c.GetRay(cw, i, j)
-					samplesOut <- ray.GetColor(world, c.bounceDepth)
-					c.workers <- cw
-					wg.Done()
-				}(cameraWorker)
-			}
-			wg.Wait()
-			close(samplesOut)
-		}()
-		for s := range samplesOut {
-			sample.Add(s)
-		}
-		sample.Scale(1.0 / float32(c.samplesPerPixel))
-		sample.ToGamma2()
-		sample.ToRGB()
-		out <- sample
-	}()
-
-	return out
-
+func (c *Camera) GetPixelColor(world *World, cw *CameraWorker, i, j int) Vec3[float32] {
+	sample := NewVec3Zero[float32]()
+	for k := 0; k < c.samplesPerPixel; k++ {
+		ray := c.GetRay(cw, i, j)
+		s := ray.GetColor(world, c.bounceDepth)
+		sample.Add(s)
+	}
+	sample.Scale(1.0 / float32(c.samplesPerPixel))
+	sample.ToGamma2()
+	sample.ToRGB()
+	return sample
 }
 
 func (c *Camera) GetRay(cw *CameraWorker, i, j int) *Ray {
