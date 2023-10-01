@@ -30,21 +30,21 @@ type Camera struct {
 	bounceDepth         int
 	defocusAngleRadians float32
 	focusDistance       float32
-	viewportU           Vec3[float32]
-	viewportV           Vec3[float32]
-	pixelDu             Vec3[float32]
-	pixelDv             Vec3[float32]
-	viewportUpperLeft   Vec3[float32]
-	pixel00             Vec3[float32]
-	center              Vec3[float32]
-	lookAt              Vec3[float32]
-	lookFrom            Vec3[float32]
-	vup                 Vec3[float32]
-	u                   Vec3[float32]
-	v                   Vec3[float32]
-	w                   Vec3[float32]
-	defocusDiskU        Vec3[float32]
-	defocusDiskV        Vec3[float32]
+	viewportU           Vec3
+	viewportV           Vec3
+	pixelDu             Vec3
+	pixelDv             Vec3
+	viewportUpperLeft   Vec3
+	pixel00             Vec3
+	center              Vec3
+	lookAt              Vec3
+	lookFrom            Vec3
+	vup                 Vec3
+	u                   Vec3
+	v                   Vec3
+	w                   Vec3
+	defocusDiskU        Vec3
+	defocusDiskV        Vec3
 	fovRadians          float32
 	workers             chan *CameraWorker
 	once                sync.Once
@@ -70,13 +70,13 @@ func WithFOVDegrees(fov float32) CameraOpt {
 	}
 }
 
-func WithLookAt(lookAt Vec3[float32]) CameraOpt {
+func WithLookAt(lookAt Vec3) CameraOpt {
 	return func(c *Camera) {
 		c.lookAt = lookAt
 	}
 }
 
-func WithLookFrom(lookFrom Vec3[float32]) CameraOpt {
+func WithLookFrom(lookFrom Vec3) CameraOpt {
 	return func(c *Camera) {
 		c.lookFrom = lookFrom
 	}
@@ -103,9 +103,9 @@ func NewCamera(aspectRatio float32, imageWidth int, opts ...CameraOpt) *Camera {
 		bounceDepth:         50,
 		focusDistance:       10,
 		defocusAngleRadians: 0,
-		lookAt:              NewVec3[float32](0, 0, 0),
-		lookFrom:            NewVec3[float32](0, 0, -1),
-		vup:                 NewVec3[float32](0, 1, 0),
+		lookAt:              NewVec3(0, 0, 0),
+		lookFrom:            NewVec3(0, 0, -1),
+		vup:                 NewVec3(0, 1, 0),
 	}
 
 	for _, fn := range opts {
@@ -240,8 +240,8 @@ func (c *Camera) StartChunkRenderer(writer io.Writer, chunksIn <-chan []string) 
 
 }
 
-func (c *Camera) GetPixelColor(world *World, cw *CameraWorker, i, j int) Vec3[float32] {
-	sample := NewVec3Zero[float32]()
+func (c *Camera) GetPixelColor(world *World, cw *CameraWorker, i, j int) Vec3 {
+	sample := NewVec3Zero()
 	for k := 0; k < c.samplesPerPixel; k++ {
 		ray := c.GetRay(cw, i, j)
 		s := ray.GetColor(world, c.bounceDepth)
@@ -277,7 +277,7 @@ func (c *Camera) GetRay(cw *CameraWorker, i, j int) *Ray {
 	return NewRay(origin, rayDir, cw.rand)
 }
 
-func (c *Camera) sampleUnitSquare(randCtx *rand.Rand) Vec3[float32] {
+func (c *Camera) sampleUnitSquare(randCtx *rand.Rand) Vec3 {
 	dx := -0.5 + randCtx.Float32()
 	dy := -0.5 + randCtx.Float32()
 

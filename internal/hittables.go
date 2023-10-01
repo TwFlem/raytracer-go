@@ -9,14 +9,14 @@ type Hittable interface {
 }
 
 type HitInfo struct {
-	point     Vec3[float32]
-	normal    Vec3[float32]
+	point     Vec3
+	normal    Vec3
 	t         float32
 	material  Material
 	frontFace bool
 }
 
-func NewHitInfo(t float32, intersectingRayDirection, point, unitOutwardNormal Vec3[float32], material Material) HitInfo {
+func NewHitInfo(t float32, intersectingRayDirection, point, unitOutwardNormal Vec3, material Material) HitInfo {
 	frontFace := Dot(intersectingRayDirection, unitOutwardNormal) < 0
 	if !frontFace {
 		unitOutwardNormal.Scale(-1)
@@ -58,7 +58,7 @@ func (w *World) Hit(r *Ray, tMin float32, tMax float32) (HitInfo, bool) {
 }
 
 type Sphere struct {
-	Center   Vec3[float32]
+	Center   Vec3
 	Radius   float32
 	Material Material
 }

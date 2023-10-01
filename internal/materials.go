@@ -11,14 +11,14 @@ type Material interface {
 
 type ScatterInfo struct {
 	ray         Ray
-	attenuation Vec3[float32]
+	attenuation Vec3
 }
 
 type Lambertian struct {
-	albedo Vec3[float32]
+	albedo Vec3
 }
 
-func NewLambertian(albedo Vec3[float32]) Lambertian {
+func NewLambertian(albedo Vec3) Lambertian {
 	return Lambertian{
 		albedo: albedo,
 	}
@@ -36,11 +36,11 @@ func (l *Lambertian) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 }
 
 type Metal struct {
-	albedo Vec3[float32]
+	albedo Vec3
 	fuzz   float32
 }
 
-func NewMetal(albedo Vec3[float32], fuzz float32) Metal {
+func NewMetal(albedo Vec3, fuzz float32) Metal {
 	return Metal{
 		albedo: albedo,
 		fuzz:   fuzz,
@@ -85,7 +85,7 @@ func (d *Dielectric) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 	cosTheta := float32(math.Min(float64(Dot(Scale(unitDir, -1), hi.normal)), 1.0))
 	sinTheta := float32(math.Sqrt(1 - float64(cosTheta*cosTheta)))
 	cannotRefract := sinTheta*etaOEtaPrime > 1.0
-	var direction Vec3[float32]
+	var direction Vec3
 	if cannotRefract || reflectance(cosTheta, etaOEtaPrime) > rand.Float32() {
 		direction = reflect(unitDir, hi.normal)
 	} else {
@@ -94,7 +94,7 @@ func (d *Dielectric) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 
 	return ScatterInfo{
 		ray:         *NewRay(hi.point, direction, r.rand),
-		attenuation: NewVec3[float32](1, 1, 1),
+		attenuation: NewVec3(1, 1, 1),
 	}, true
 }
 

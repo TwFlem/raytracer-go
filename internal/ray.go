@@ -6,12 +6,12 @@ import (
 )
 
 type Ray struct {
-	origin Vec3[float32]
-	dir    Vec3[float32]
+	origin Vec3
+	dir    Vec3
 	rand   *rand.Rand
 }
 
-func NewRay(origin, dir Vec3[float32], randCtx *rand.Rand) *Ray {
+func NewRay(origin, dir Vec3, randCtx *rand.Rand) *Ray {
 	return &Ray{
 		origin: origin,
 		dir:    dir,
@@ -19,7 +19,7 @@ func NewRay(origin, dir Vec3[float32], randCtx *rand.Rand) *Ray {
 	}
 }
 
-func (r *Ray) At(t float32) Vec3[float32] {
+func (r *Ray) At(t float32) Vec3 {
 	dir := r.dir.Cpy()
 	dir.Scale(t)
 	dir.Add(r.origin)
@@ -27,11 +27,11 @@ func (r *Ray) At(t float32) Vec3[float32] {
 }
 
 type GetColorInfo struct {
-	color   Vec3[float32]
+	color   Vec3
 	nextRay *Ray
 }
 
-func (r *Ray) GetColor(world *World, maxDepth int) Vec3[float32] {
+func (r *Ray) GetColor(world *World, maxDepth int) Vec3 {
 	initColorInfo := getNextColor(r, world)
 	color := initColorInfo.color
 	if initColorInfo.nextRay != nil {
@@ -44,7 +44,7 @@ func (r *Ray) GetColor(world *World, maxDepth int) Vec3[float32] {
 			bounce++
 		}
 		if bounce >= maxDepth {
-			return NewVec3Zero[float32]()
+			return NewVec3Zero()
 		}
 	}
 	return color
@@ -59,7 +59,7 @@ func getNextColor(r *Ray, world *World) GetColorInfo {
 			}
 		}
 		return GetColorInfo{
-			color:   NewVec3Zero[float32](),
+			color:   NewVec3Zero(),
 			nextRay: nil,
 		}
 	}
@@ -67,8 +67,8 @@ func getNextColor(r *Ray, world *World) GetColorInfo {
 	unit := Unit(r.dir)
 	a := 0.5 * (unit.Y + 1)
 
-	white := NewVec3[float32](1, 1, 1)
-	blue := NewVec3[float32](0.5, 0.7, 1)
+	white := NewVec3(1, 1, 1)
+	blue := NewVec3(0.5, 0.7, 1)
 
 	sky := Add(Scale(white, (1.0-a)), Scale(blue, a))
 	return GetColorInfo{
