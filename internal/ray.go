@@ -3,19 +3,22 @@ package internal
 import (
 	"math"
 	"math/rand"
+	"time"
 )
 
 type Ray struct {
-	origin Vec3
-	dir    Vec3
-	rand   *rand.Rand
+	origin    Vec3
+	dir       Vec3
+	rand      *rand.Rand
+	startTime time.Time
 }
 
 func NewRay(origin, dir Vec3, randCtx *rand.Rand) *Ray {
 	return &Ray{
-		origin: origin,
-		dir:    dir,
-		rand:   randCtx,
+		origin:    origin,
+		dir:       dir,
+		rand:      randCtx,
+		startTime: time.Now(),
 	}
 }
 
@@ -31,7 +34,7 @@ type GetColorInfo struct {
 	nextRay *Ray
 }
 
-func (r *Ray) GetColor(world *World, maxDepth int) Vec3 {
+func (r *Ray) GetColor(world Hittable, maxDepth int) Vec3 {
 	initColorInfo := getNextColor(r, world)
 	color := initColorInfo.color
 	if initColorInfo.nextRay != nil {
@@ -50,8 +53,11 @@ func (r *Ray) GetColor(world *World, maxDepth int) Vec3 {
 	return color
 }
 
-func getNextColor(r *Ray, world *World) GetColorInfo {
-	if hitInfo, ok := world.Hit(r, 0.001, float32(math.Inf(1))); ok {
+func getNextColor(r *Ray, world Hittable) GetColorInfo {
+	if hitInfo, ok := world.Hit(r, Interval{
+		min: 0.001,
+		max: float32(math.Inf(1)),
+	}); ok {
 		if scatterInfo, ok := hitInfo.material.Scatter(r, hitInfo); ok {
 			return GetColorInfo{
 				color:   scatterInfo.attenuation,

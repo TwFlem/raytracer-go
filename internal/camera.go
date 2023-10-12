@@ -169,7 +169,7 @@ func (c *Camera) init() {
 	})
 }
 
-func (c *Camera) Render(world *World, writer io.Writer) error {
+func (c *Camera) Render(world Hittable, writer io.Writer) error {
 	w := int(c.imageWidth)
 	h := int(c.imageHeight)
 	ppm := []string{
@@ -197,7 +197,7 @@ func (c *Camera) Render(world *World, writer io.Writer) error {
 				cw := <-c.workers
 				in := make(chan string)
 				wg.Add(1)
-				go func(innerWorld *World, innerIn chan string, innerCw *CameraWorker, innerI, innerJ int) {
+				go func(innerWorld Hittable, innerIn chan string, innerCw *CameraWorker, innerI, innerJ int) {
 					defer close(innerIn)
 					col := c.GetPixelColor(innerWorld, innerCw, innerI, innerJ)
 					c.workers <- innerCw
@@ -240,7 +240,7 @@ func (c *Camera) StartChunkRenderer(writer io.Writer, chunksIn <-chan []string) 
 
 }
 
-func (c *Camera) GetPixelColor(world *World, cw *CameraWorker, i, j int) Vec3 {
+func (c *Camera) GetPixelColor(world Hittable, cw *CameraWorker, i, j int) Vec3 {
 	sample := NewVec3Zero()
 	for k := 0; k < c.samplesPerPixel; k++ {
 		ray := c.GetRay(cw, i, j)

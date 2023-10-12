@@ -35,6 +35,14 @@ func AbsF32(in float32) float32 {
 	return math.Float32frombits(math.Float32bits(in) &^ (1 << 31))
 }
 
+func MinF32(a, b float32) float32 {
+	return float32(math.Min(float64(a), float64(b)))
+}
+
+func MaxF32(a, b float32) float32 {
+	return float32(math.Max(float64(a), float64(b)))
+}
+
 const radRatio float32 = math.Pi / 180.0
 
 func ToRadians(degrees float32) float32 {

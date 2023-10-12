@@ -1,2 +1,4 @@
 github.com/TwFlem/pipe v0.0.0-20231001042535-36ac8cb81796 h1:mh7rydFtjvBcNcsogwKTdZtvovo49mwa/GbNR17irxo=
 github.com/TwFlem/pipe v0.0.0-20231001042535-36ac8cb81796/go.mod h1:zI5T9LwkV7JX3CcF26aadblUDY4d2dDOM+Znww9SIkg=
+golang.org/x/exp v0.0.0-20231006140011-7918f672742d h1:jtJma62tbqLibJ5sFQz8bKtEM8rJBtfilJ2qTU199MI=
+golang.org/x/exp v0.0.0-20231006140011-7918f672742d/go.mod h1:ldy0pHrwJyGW56pPQzzkH36rKxoZW1tw7ZJpeKx+hdo=

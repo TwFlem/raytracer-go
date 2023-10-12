@@ -49,15 +49,10 @@ func main() {
 	}
 	defer f.Close()
 
-	matGround := internal.NewLambertian(internal.NewVec3(0.5, 0.5, 0.5))
+	world := internal.NewWorld()
 
-	hittables := []internal.Hittable{
-		&internal.Sphere{
-			Center:   internal.NewVec3(0, -1000, 0),
-			Radius:   1000,
-			Material: &matGround,
-		},
-	}
+	matGround := internal.NewLambertian(internal.NewVec3(0.5, 0.5, 0.5))
+	world.Add(internal.NewSphere(internal.NewVec3(0, -1000, 0), 1000, &matGround))
 
 	src := rand.NewSource(time.Now().Unix())
 	randCtx := rand.New(src)
@@ -70,54 +65,41 @@ func main() {
 			dist := internal.Sub(center, p)
 			ln := dist.Len()
 			if ln > 0.9 {
-				sphere := &internal.Sphere{
-					Center: center,
-					Radius: 0.2,
-				}
+				var sphereMat internal.Material
 				if matPer < 0.8 {
 					albedo := internal.Mul(internal.NewVec3Rand32(randCtx), internal.NewVec3Rand32(randCtx))
 					mat := internal.NewLambertian(albedo)
-					sphere.Material = &mat
+					sphereMat = &mat
 				} else if matPer < 0.95 {
 					albedo := internal.NewVec3RandRange32(randCtx, 0.5, 1)
 					fuzz := internal.RandF32N(randCtx, 0, 0.5)
 					mat := internal.NewMetal(albedo, fuzz)
-					sphere.Material = &mat
+					sphereMat = &mat
 				} else {
 					mat := internal.NewDielectric(1.5)
-					sphere.Material = &mat
+					sphereMat = &mat
 				}
-				hittables = append(hittables, sphere)
+				world.Add(internal.NewSphere(center, 0.2, sphereMat))
 			}
 
 		}
 	}
 
 	m1 := internal.NewDielectric(1.5)
-	hittables = append(hittables, &internal.Sphere{
-		Center:   internal.NewVec3(0, 1, 0),
-		Radius:   1,
-		Material: &m1,
-	})
-	m2 := internal.NewLambertian(internal.NewVec3(0.4, 0.2, 0.1))
-	hittables = append(hittables, &internal.Sphere{
-		Center:   internal.NewVec3(-4, 1, 0),
-		Radius:   1,
-		Material: &m2,
-	})
-	m3 := internal.NewMetal(internal.NewVec3(0.7, 0.6, 0.5), 0)
-	hittables = append(hittables, &internal.Sphere{
-		Center:   internal.NewVec3(4, 1, 0),
-		Radius:   1,
-		Material: &m3,
-	})
+	world.Add(internal.NewSphere(internal.NewVec3(0, 1, 0), 1, &m1))
 
-	world := internal.NewWorld(hittables)
+	m2 := internal.NewLambertian(internal.NewVec3(0.4, 0.2, 0.1))
+	world.Add(internal.NewSphere(internal.NewVec3(-4, 1, 0), 1, &m2))
+
+	m3 := internal.NewMetal(internal.NewVec3(0.7, 0.6, 0.5), 0)
+	world.Add(internal.NewSphere(internal.NewVec3(4, 1, 0), 1, &m3))
 
 	if profileEnabled {
 		pprof.StartCPUProfile(cpuPprofF)
 	}
-	err = camera.Render(world, f)
+
+	worldTree := internal.NewBVHFromWorld(world)
+	err = camera.Render(worldTree, f)
 	if err != nil {
 		panic(err)
 	}
