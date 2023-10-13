@@ -13,6 +13,8 @@ type HitInfo struct {
 	point     Vec3
 	normal    Vec3
 	t         float32
+	u         float32
+	v         float32
 	material  Material
 	frontFace bool
 }

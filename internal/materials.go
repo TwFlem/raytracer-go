@@ -11,11 +11,11 @@ type Material interface {
 
 type ScatterInfo struct {
 	ray         Ray
-	attenuation Vec3
+	attenuation Color
 }
 
 type Lambertian struct {
-	albedo Vec3
+	albedo Color
 }
 
 func NewLambertian(albedo Vec3) Lambertian {
@@ -36,7 +36,7 @@ func (l *Lambertian) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 }
 
 type Metal struct {
-	albedo Vec3
+	albedo Color
 	fuzz   float32
 }
 

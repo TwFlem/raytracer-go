@@ -42,9 +42,9 @@ func NewAabbFromBoxes(b1, b2 Aabb) Aabb {
 }
 
 func (a *Aabb) Hit(r *Ray, rT Interval) bool {
-	if _, ok := InBoundary(r.dir.X, r.origin.X, a.x.min, a.x.max, rT); ok {
-		if _, ok := InBoundary(r.dir.Y, r.origin.Y, a.y.min, a.y.max, rT); ok {
-			if _, ok = InBoundary(r.dir.Z, r.origin.Z, a.z.min, a.z.max, rT); ok {
+	if ok := InBoundary(r.dir.X, r.origin.X, a.x.min, a.x.max, &rT); ok {
+		if ok := InBoundary(r.dir.Y, r.origin.Y, a.y.min, a.y.max, &rT); ok {
+			if ok = InBoundary(r.dir.Z, r.origin.Z, a.z.min, a.z.max, &rT); ok {
 				return true
 			}
 		}
@@ -52,29 +52,53 @@ func (a *Aabb) Hit(r *Ray, rT Interval) bool {
 	return false
 }
 
-func (a Aabb) GetBounds() Aabb {
-	return a
-}
-
-func InBoundary(dir, origin, min, max float32, rayInterval Interval) (Interval, bool) {
+func InBoundary(dir, origin, aMin, aMax float32, rT *Interval) bool {
 	invD := 1 / dir
-	t0 := (min - origin) * dir
-	t1 := (max - origin) * dir
+	t0 := (aMin - origin) * invD
+	t1 := (aMax - origin) * invD
 
 	if invD < 0 {
 		t0, t1 = t1, t0
 	}
 
-	if t0 > rayInterval.min {
-		rayInterval.min = t0
+	if t0 > rT.min {
+		rT.min = t0
 	}
 
-	if t1 < rayInterval.max {
-		rayInterval.max = t1
+	if t1 < rT.max {
+		rT.max = t1
 	}
 
-	return rayInterval, rayInterval.min < rayInterval.max
+	return rT.min < rT.max
 }
+
+func (a Aabb) GetBounds() Aabb {
+	return a
+}
+
+// func (a *Aabb) Hit(r *Ray, rT Interval) bool {
+// 	mins := []float32{a.x.min, a.y.min, a.z.min}
+// 	maxs := []float32{a.z.max, a.z.max, a.z.max}
+// 	origs := []float32{r.origin.X, r.origin.Y, r.origin.Z}
+// 	dirs := []float32{r.dir.X, r.dir.Y, r.dir.Z}
+// 	for i := range mins {
+// 		invD := 1.0 / dirs[i]
+// 		t0 := (mins[i] - origs[i]) * invD
+// 		t1 := (maxs[i] - origs[i]) * invD
+// 		if invD < 0.0 {
+// 			t := t0
+// 			t0 = t1
+// 			t1 = t
+// 		}
+//
+// 		rT.min = MaxF32(t0, rT.min)
+// 		rT.max = MaxF32(t1, rT.max)
+// 		if rT.max <= rT.min {
+// 			return false
+// 		}
+// 	}
+// 	return true
+// }
 
 type BVH struct {
 	left  Hittable
@@ -111,9 +135,13 @@ func NewBVH(hittables []Hittable) *BVH {
 		bvh.right = h[0]
 		break
 	case 2:
-		slices.SortFunc(h, compare)
-		bvh.left = h[0]
-		bvh.right = h[1]
+		if compare(h[0], h[1]) > 0 {
+			bvh.left = h[1]
+			bvh.right = h[0]
+		} else {
+			bvh.left = h[0]
+			bvh.right = h[1]
+		}
 		break
 	default:
 		slices.SortFunc(h, compare)
@@ -184,6 +212,7 @@ func (b *BVH) Hit(r *Ray, rayT Interval) (HitInfo, bool) {
 	if hitRight {
 		return rightHitInfo, true
 	}
+
 	if hitLeft {
 		return leftHitInfo, true
 	}

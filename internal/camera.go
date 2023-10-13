@@ -201,7 +201,10 @@ func (c *Camera) Render(world Hittable, writer io.Writer) error {
 					defer close(innerIn)
 					col := c.GetPixelColor(innerWorld, innerCw, innerI, innerJ)
 					c.workers <- innerCw
-					innerIn <- col.String()
+					colorVec := col.GetColor()
+					colorVec.ToGamma2()
+					colorVec.ToRGB()
+					innerIn <- colorVec.String()
 					wg.Done()
 				}(world, in, cw, i, j)
 				colorsOut <- in
@@ -240,16 +243,14 @@ func (c *Camera) StartChunkRenderer(writer io.Writer, chunksIn <-chan []string) 
 
 }
 
-func (c *Camera) GetPixelColor(world Hittable, cw *CameraWorker, i, j int) Vec3 {
+func (c *Camera) GetPixelColor(world Hittable, cw *CameraWorker, i, j int) Color {
 	sample := NewVec3Zero()
 	for k := 0; k < c.samplesPerPixel; k++ {
 		ray := c.GetRay(cw, i, j)
-		s := ray.GetColor(world, c.bounceDepth)
+		s := ray.GetColor(world, c.bounceDepth).GetColor()
 		sample.Add(s)
 	}
 	sample.Scale(1.0 / float32(c.samplesPerPixel))
-	sample.ToGamma2()
-	sample.ToRGB()
 	return sample
 }
 
