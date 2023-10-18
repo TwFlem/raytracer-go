@@ -76,30 +76,6 @@ func (a Aabb) GetBounds() Aabb {
 	return a
 }
 
-// func (a *Aabb) Hit(r *Ray, rT Interval) bool {
-// 	mins := []float32{a.x.min, a.y.min, a.z.min}
-// 	maxs := []float32{a.z.max, a.z.max, a.z.max}
-// 	origs := []float32{r.origin.X, r.origin.Y, r.origin.Z}
-// 	dirs := []float32{r.dir.X, r.dir.Y, r.dir.Z}
-// 	for i := range mins {
-// 		invD := 1.0 / dirs[i]
-// 		t0 := (mins[i] - origs[i]) * invD
-// 		t1 := (maxs[i] - origs[i]) * invD
-// 		if invD < 0.0 {
-// 			t := t0
-// 			t0 = t1
-// 			t1 = t
-// 		}
-//
-// 		rT.min = MaxF32(t0, rT.min)
-// 		rT.max = MaxF32(t1, rT.max)
-// 		if rT.max <= rT.min {
-// 			return false
-// 		}
-// 	}
-// 	return true
-// }
-
 type BVH struct {
 	left  Hittable
 	right Hittable

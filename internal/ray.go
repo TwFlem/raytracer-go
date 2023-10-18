@@ -30,19 +30,19 @@ func (r *Ray) At(t float32) Vec3 {
 }
 
 type GetColorInfo struct {
-	color   Color
+	color   Vec3
 	nextRay *Ray
 }
 
-func (r *Ray) GetColor(world Hittable, maxDepth int) Color {
+func (r *Ray) GetColor(world Hittable, maxDepth int) Vec3 {
 	initColorInfo := getNextColor(r, world)
-	color := initColorInfo.color.GetColor()
+	color := initColorInfo.color
 	if initColorInfo.nextRay != nil {
 		nextRay := initColorInfo.nextRay
 		bounce := 1
 		for nextRay != nil && bounce < maxDepth {
 			cInfo := getNextColor(nextRay, world)
-			color.Mul(cInfo.color.GetColor())
+			color.Mul(cInfo.color)
 			nextRay = cInfo.nextRay
 			bounce++
 		}
@@ -81,8 +81,4 @@ func getNextColor(r *Ray, world Hittable) GetColorInfo {
 		color:   sky,
 		nextRay: nil,
 	}
-}
-
-type Color interface {
-	GetColor() Vec3
 }

@@ -151,10 +151,6 @@ func (v *Vec3) ToRGB() {
 	v.Z *= 255.999
 }
 
-func (v Vec3) GetColor() Vec3 {
-	return v
-}
-
 func (v *Vec3) ToGamma2() {
 	v.X = float32(math.Sqrt(float64(v.X)))
 	v.Y = float32(math.Sqrt(float64(v.Y)))
