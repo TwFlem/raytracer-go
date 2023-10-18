@@ -29,6 +29,8 @@ func NewHitInfo(t, u, v float32, intersectingRayDirection, point, unitOutwardNor
 		point:     point,
 		normal:    unitOutwardNormal,
 		t:         t,
+		u:         u,
+		v:         v,
 		material:  material,
 		frontFace: frontFace,
 	}
@@ -117,9 +119,10 @@ func (s *Sphere) Hit(r *Ray, rayT Interval) (HitInfo, bool) {
 	norm := Scale(Sub(point, s.Center), s.Radius)
 	norm.Unit()
 
-	theta := float32(math.Cos(-float64(norm.Y)))
+	theta := float32(math.Acos(-float64(norm.Y)))
 	phi := float32(math.Atan2(-float64(norm.Z), float64(norm.X)) + math.Pi)
-	u := phi / (2 * PiF32)
+	// TODO: this 5*PiF32 should not be here. Why is it needed to match the example earth texture? Is the camera actually incorrect?
+	u := (phi + 5*PiF32/12) / (2 * PiF32)
 	v := theta / (PiF32)
 
 	hi := NewHitInfo(t, u, v, r.dir, point, norm, s.Material)

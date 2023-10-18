@@ -10,6 +10,10 @@ import (
 )
 
 const profileEnabled = true
+const (
+	randSphereScene = 0
+	earthScene      = 1
+)
 
 func main() {
 	now := time.Now()
@@ -44,7 +48,13 @@ func main() {
 	if profileEnabled {
 		pprof.StartCPUProfile(cpuPprofF)
 	}
-	err = randSpheres(f)
+	scene := earthScene
+	switch scene {
+	case randSphereScene:
+		err = randSpheres(f)
+	case earthScene:
+		err = earth(f)
+	}
 	if profileEnabled {
 		pprof.StopCPUProfile()
 		pprof.WriteHeapProfile(MemPprofF)
@@ -53,6 +63,31 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("Finished in: " + time.Since(now).String())
+}
+
+func earth(f *os.File) error {
+	camera := internal.NewCamera(
+		16.0/9.0,
+		400.0,
+		internal.WithSamplesPerPixel(100),
+		internal.WithMaxRayDepth(50),
+		internal.WithLookFrom(internal.NewVec3(0, 0, 12)),
+		internal.WithLookAt(internal.NewVec3(0, 0, 0)),
+		internal.WithFOVDegrees(20),
+		internal.WithDefocusAngleDegrees(0),
+	)
+	world := internal.NewWorld()
+
+	earthImg, err := internal.LoadJPEG("textures/earthmap.jpg")
+	if err != nil {
+		panic(err)
+	}
+	earthTex := internal.NewImageTexture(earthImg)
+	mat := internal.NewLambertian(&earthTex)
+	world.Add(internal.NewSphere(internal.NewVec3(0, 0, 0), 2, &mat))
+
+	worldTree := internal.NewBVHFromWorld(world)
+	return camera.Render(worldTree, f)
 }
 
 func randSpheres(f *os.File) error {

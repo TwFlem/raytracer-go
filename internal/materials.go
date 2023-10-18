@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"image"
 	"math"
 	"math/rand"
 )
@@ -146,4 +147,34 @@ func NewSolidColor(x, y, z float32) SolidColor {
 	return SolidColor{
 		albedo: NewVec3(x, y, z),
 	}
+}
+
+type ImageTexture struct {
+	img image.Image
+}
+
+func NewImageTexture(img image.Image) ImageTexture {
+	return ImageTexture{
+		img: img,
+	}
+}
+
+func (it *ImageTexture) GetTexture(u float32, v float32, point Vec3) Color {
+	// Debug color if there is no height to the img
+	if it.img.Bounds().Dy() <= 0 {
+		return NewVec3(0, 1, 1)
+	}
+
+	u = Clamp(0, 1, u)
+	v = 1 - Clamp(0, 1, v)
+
+	i := u * float32(it.img.Bounds().Dx())
+	j := v * float32(it.img.Bounds().Dy())
+	pixel := it.img.At(int(i), int(j))
+
+	colScale := float32(1.0 / 65535.0)
+	r, g, b, _ := pixel.RGBA()
+
+	vec := NewVec3(float32(r)*colScale, float32(g)*colScale, float32(b)*colScale)
+	return vec
 }
