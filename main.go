@@ -13,17 +13,6 @@ const profileEnabled = true
 
 func main() {
 	now := time.Now()
-	camera := internal.NewCamera(
-		16.0/9.0,
-		400.0,
-		internal.WithSamplesPerPixel(500),
-		internal.WithMaxRayDepth(50),
-		internal.WithLookFrom(internal.NewVec3(13, 2, 3)),
-		internal.WithLookAt(internal.NewVec3(0, 0, 0)),
-		internal.WithFOVDegrees(20),
-		internal.WithDefocusAngleDegrees(0.6),
-		internal.WithFocusDist(10),
-	)
 
 	var cpuPprofF *os.File
 	var MemPprofF *os.File
@@ -49,6 +38,35 @@ func main() {
 	}
 	defer f.Close()
 
+	if err != nil {
+		panic(err)
+	}
+	if profileEnabled {
+		pprof.StartCPUProfile(cpuPprofF)
+	}
+	err = randSpheres(f)
+	if profileEnabled {
+		pprof.StopCPUProfile()
+		pprof.WriteHeapProfile(MemPprofF)
+	}
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Finished in: " + time.Since(now).String())
+}
+
+func randSpheres(f *os.File) error {
+	camera := internal.NewCamera(
+		16.0/9.0,
+		400.0,
+		internal.WithSamplesPerPixel(500),
+		internal.WithMaxRayDepth(50),
+		internal.WithLookFrom(internal.NewVec3(13, 2, 3)),
+		internal.WithLookAt(internal.NewVec3(0, 0, 0)),
+		internal.WithFOVDegrees(20),
+		internal.WithDefocusAngleDegrees(0.6),
+		internal.WithFocusDist(10),
+	)
 	world := internal.NewWorld()
 
 	checkered := internal.NewCheckered(0.32, internal.NewVec3(0.2, 0.3, 0.1), internal.NewVec3(0.9, 0.9, 0.9))
@@ -96,18 +114,6 @@ func main() {
 	m3 := internal.NewMetal(internal.NewVec3(0.7, 0.6, 0.5), 0)
 	world.Add(internal.NewSphere(internal.NewVec3(4, 1, 0), 1, &m3))
 
-	if profileEnabled {
-		pprof.StartCPUProfile(cpuPprofF)
-	}
-
 	worldTree := internal.NewBVHFromWorld(world)
-	err = camera.Render(worldTree, f)
-	if err != nil {
-		panic(err)
-	}
-	if profileEnabled {
-		pprof.StopCPUProfile()
-		pprof.WriteHeapProfile(MemPprofF)
-	}
-	fmt.Println("Finished in: " + time.Since(now).String())
+	return camera.Render(worldTree, f)
 }

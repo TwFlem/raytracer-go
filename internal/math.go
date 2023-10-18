@@ -45,6 +45,8 @@ func MaxF32(a, b float32) float32 {
 
 const radRatio float32 = math.Pi / 180.0
 
+const PiF32 = float32(math.Pi)
+
 func ToRadians(degrees float32) float32 {
 	return degrees * radRatio
 }

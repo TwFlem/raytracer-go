@@ -19,7 +19,7 @@ type HitInfo struct {
 	frontFace bool
 }
 
-func NewHitInfo(t float32, intersectingRayDirection, point, unitOutwardNormal Vec3, material Material) HitInfo {
+func NewHitInfo(t, u, v float32, intersectingRayDirection, point, unitOutwardNormal Vec3, material Material) HitInfo {
 	frontFace := Dot(intersectingRayDirection, unitOutwardNormal) < 0
 	if !frontFace {
 		unitOutwardNormal.Scale(-1)
@@ -117,7 +117,12 @@ func (s *Sphere) Hit(r *Ray, rayT Interval) (HitInfo, bool) {
 	norm := Scale(Sub(point, s.Center), s.Radius)
 	norm.Unit()
 
-	hi := NewHitInfo(t, r.dir, point, norm, s.Material)
+	theta := float32(math.Cos(-float64(norm.Y)))
+	phi := float32(math.Atan2(-float64(norm.Z), float64(norm.X)) + math.Pi)
+	u := phi / (2 * PiF32)
+	v := theta / (PiF32)
+
+	hi := NewHitInfo(t, u, v, r.dir, point, norm, s.Material)
 
 	return hi, true
 
