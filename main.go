@@ -51,7 +51,8 @@ func main() {
 
 	world := internal.NewWorld()
 
-	matGround := internal.NewLambertian(internal.NewVec3(0.5, 0.5, 0.5))
+	checkered := internal.NewCheckered(0.32, internal.NewVec3(0.2, 0.3, 0.1), internal.NewVec3(0.9, 0.9, 0.9))
+	matGround := internal.NewLambertian(&checkered)
 	world.Add(internal.NewSphere(internal.NewVec3(0, -1000, 0), 1000, &matGround))
 
 	src := rand.NewSource(time.Now().Unix())
@@ -67,8 +68,9 @@ func main() {
 			if ln > 0.9 {
 				var sphereMat internal.Material
 				if matPer < 0.8 {
-					albedo := internal.Mul(internal.NewVec3Rand32(randCtx), internal.NewVec3Rand32(randCtx))
-					mat := internal.NewLambertian(albedo)
+					randCol := internal.Mul(internal.NewVec3Rand32(randCtx), internal.NewVec3Rand32(randCtx))
+					tex := internal.NewSolidColor(randCol.X, randCol.Y, randCol.Z)
+					mat := internal.NewLambertian(tex)
 					sphereMat = &mat
 				} else if matPer < 0.95 {
 					albedo := internal.NewVec3RandRange32(randCtx, 0.5, 1)
@@ -88,7 +90,7 @@ func main() {
 	m1 := internal.NewDielectric(1.5)
 	world.Add(internal.NewSphere(internal.NewVec3(0, 1, 0), 1, &m1))
 
-	m2 := internal.NewLambertian(internal.NewVec3(0.4, 0.2, 0.1))
+	m2 := internal.NewLambertian(internal.NewSolidColor(0.4, 0.2, 0.1))
 	world.Add(internal.NewSphere(internal.NewVec3(-4, 1, 0), 1, &m2))
 
 	m3 := internal.NewMetal(internal.NewVec3(0.7, 0.6, 0.5), 0)

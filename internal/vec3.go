@@ -155,6 +155,10 @@ func (v Vec3) GetColor() Vec3 {
 	return v
 }
 
+func (vec Vec3) GetTexture(u, v, point Vec3) Color {
+	return v
+}
+
 func (v *Vec3) ToGamma2() {
 	v.X = float32(math.Sqrt(float64(v.X)))
 	v.Y = float32(math.Sqrt(float64(v.Y)))

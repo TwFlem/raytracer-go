@@ -15,10 +15,10 @@ type ScatterInfo struct {
 }
 
 type Lambertian struct {
-	albedo Color
+	albedo Texture
 }
 
-func NewLambertian(albedo Vec3) Lambertian {
+func NewLambertian(albedo Texture) Lambertian {
 	return Lambertian{
 		albedo: albedo,
 	}
@@ -31,7 +31,7 @@ func (l *Lambertian) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 	}
 	return ScatterInfo{
 		ray:         *NewRay(hi.point, dir, r.rand),
-		attenuation: l.albedo,
+		attenuation: l.albedo.GetTexture(hi.u, hi.v, hi.point),
 	}, true
 }
 
@@ -102,4 +102,48 @@ func reflectance(cosTheta, etaOEtaPrime float32) float32 {
 	r0 := (1.0 - etaOEtaPrime) / (1.0 + etaOEtaPrime)
 	r0 *= r0
 	return r0 + (1-r0)*float32(math.Pow(1-float64(cosTheta), 5))
+}
+
+type Checkered struct {
+	scale float32
+	even  Color
+	odd   Color
+}
+
+func (c *Checkered) GetTexture(u float32, v float32, point Vec3) Color {
+	invScale := 1 / c.scale
+	x := int(math.Floor(float64(invScale * point.X)))
+	y := int(math.Floor(float64(invScale * point.Y)))
+	z := int(math.Floor(float64(invScale * point.Z)))
+
+	if (x+y+z)%2 == 0 {
+		return c.even
+	}
+	return c.odd
+}
+
+func NewCheckered(scale float32, even, odd Vec3) Checkered {
+	return Checkered{
+		scale: scale,
+		even:  even,
+		odd:   odd,
+	}
+}
+
+type Texture interface {
+	GetTexture(u, v float32, point Vec3) Color
+}
+
+type SolidColor struct {
+	albedo Color
+}
+
+func (s SolidColor) GetTexture(u float32, v float32, point Vec3) Color {
+	return s.albedo.GetColor()
+}
+
+func NewSolidColor(x, y, z float32) SolidColor {
+	return SolidColor{
+		albedo: NewVec3(x, y, z),
+	}
 }
