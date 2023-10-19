@@ -178,3 +178,64 @@ func (it *ImageTexture) GetTexture(u float32, v float32, point Vec3) Color {
 	vec := NewVec3(float32(r)*colScale, float32(g)*colScale, float32(b)*colScale)
 	return vec
 }
+
+type Perlin struct {
+	randFloats []float32
+	permX      []int
+	permY      []int
+	permZ      []int
+}
+
+func NewPerlin() Perlin {
+	pointCount := 256
+	points := make([]float32, pointCount)
+	for i := 0; i < len(points); i++ {
+		points[i] = rand.Float32()
+	}
+
+	return Perlin{
+		randFloats: points,
+		permX:      Permute(GetNums(pointCount)),
+		permY:      Permute(GetNums(pointCount)),
+		permZ:      Permute(GetNums(pointCount)),
+	}
+
+}
+
+func (per *Perlin) Noise(p Vec3) float32 {
+	i := int(4*p.X) & 255
+	j := int(4*p.Y) & 255
+	k := int(4*p.Z) & 255
+
+	return per.randFloats[per.permX[i]^per.permY[j]^per.permZ[k]]
+}
+
+func GetNums(closedUpperEnd int) []int {
+	n := make([]int, closedUpperEnd)
+	for i := 0; i < len(n); i++ {
+		n[i] = i
+	}
+	return n
+}
+
+func Permute(p []int) []int {
+	for i := len(p) - 1; i > 0; i-- {
+		target := rand.Intn(i)
+		p[i], p[target] = p[target], p[i]
+	}
+	return p
+}
+
+type NoiseTexture struct {
+	perlin Perlin
+}
+
+func (n *NoiseTexture) GetTexture(u float32, v float32, point Vec3) Color {
+	return Scale(NewVec3Unit(), n.perlin.Noise(point))
+}
+
+func NewNoiseTexture() NoiseTexture {
+	return NoiseTexture{
+		perlin: NewPerlin(),
+	}
+}

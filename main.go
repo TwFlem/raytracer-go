@@ -13,6 +13,7 @@ const profileEnabled = true
 const (
 	randSphereScene = 0
 	earthScene      = 1
+	perlinDemoScene = 2
 )
 
 func main() {
@@ -48,12 +49,14 @@ func main() {
 	if profileEnabled {
 		pprof.StartCPUProfile(cpuPprofF)
 	}
-	scene := earthScene
+	scene := perlinDemoScene
 	switch scene {
 	case randSphereScene:
 		err = randSpheres(f)
 	case earthScene:
 		err = earth(f)
+	case perlinDemoScene:
+		err = perlinDemo(f)
 	}
 	if profileEnabled {
 		pprof.StopCPUProfile()
@@ -85,6 +88,28 @@ func earth(f *os.File) error {
 	earthTex := internal.NewImageTexture(earthImg)
 	mat := internal.NewLambertian(&earthTex)
 	world.Add(internal.NewSphere(internal.NewVec3(0, 0, 0), 2, &mat))
+
+	worldTree := internal.NewBVHFromWorld(world)
+	return camera.Render(worldTree, f)
+}
+
+func perlinDemo(f *os.File) error {
+	camera := internal.NewCamera(
+		16.0/9.0,
+		400.0,
+		internal.WithSamplesPerPixel(100),
+		internal.WithMaxRayDepth(50),
+		internal.WithLookFrom(internal.NewVec3(13, 2, 3)),
+		internal.WithLookAt(internal.NewVec3(0, 0, 0)),
+		internal.WithFOVDegrees(20),
+		internal.WithDefocusAngleDegrees(0),
+	)
+	world := internal.NewWorld()
+
+	perlinTex := internal.NewNoiseTexture()
+	mat := internal.NewLambertian(&perlinTex)
+	world.Add(internal.NewSphere(internal.NewVec3(0, -1000, 0), 1000, &mat))
+	world.Add(internal.NewSphere(internal.NewVec3(0, 2, 0), 2, &mat))
 
 	worldTree := internal.NewBVHFromWorld(world)
 	return camera.Render(worldTree, f)
