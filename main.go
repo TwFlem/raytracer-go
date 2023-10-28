@@ -106,7 +106,7 @@ func perlinDemo(f *os.File) error {
 	)
 	world := internal.NewWorld()
 
-	perlinTex := internal.NewNoiseTexture()
+	perlinTex := internal.NewNoiseTexture(4)
 	mat := internal.NewLambertian(&perlinTex)
 	world.Add(internal.NewSphere(internal.NewVec3(0, -1000, 0), 1000, &mat))
 	world.Add(internal.NewSphere(internal.NewVec3(0, 2, 0), 2, &mat))

@@ -253,14 +253,16 @@ func Permute(p []int) []int {
 
 type NoiseTexture struct {
 	perlin Perlin
+	scale  float32
 }
 
 func (n *NoiseTexture) GetTexture(u float32, v float32, point Vec3) Color {
-	return Scale(NewVec3Unit(), n.perlin.Noise(point))
+	return Scale(NewVec3Unit(), n.perlin.Noise(Scale(point, n.scale)))
 }
 
-func NewNoiseTexture() NoiseTexture {
+func NewNoiseTexture(scale float32) NoiseTexture {
 	return NoiseTexture{
 		perlin: NewPerlin(),
+		scale:  scale,
 	}
 }
