@@ -202,12 +202,37 @@ func NewPerlin() Perlin {
 
 }
 
-func (per *Perlin) Noise(p Vec3) float32 {
-	i := int(4*p.X) & 255
-	j := int(4*p.Y) & 255
-	k := int(4*p.Z) & 255
+func smoothstep(t float32) float32 {
+	return t * t * (3 - 2*t)
+}
 
-	return per.randFloats[per.permX[i]^per.permY[j]^per.permZ[k]]
+// TODO: Study noise
+func (per *Perlin) Noise(p Vec3) float32 {
+	xi := float32(math.Floor(float64(p.X)))
+	yi := float32(math.Floor(float64(p.Y)))
+	zi := float32(math.Floor(float64(p.Z)))
+
+	tx := smoothstep(p.X - float32(xi))
+	ty := smoothstep(p.Y - float32(yi))
+	tz := smoothstep(p.Z - float32(zi))
+
+	rx0 := int(xi) & 255
+	rx1 := (rx0 + 1) & 255
+	ry0 := int(yi) & 255
+	ry1 := (ry0 + 1) & 255
+	rz0 := int(zi) & 255
+	rz1 := (rz0 + 1) & 255
+
+	c000 := per.randFloats[per.permX[rx0]^per.permY[ry0]^per.permZ[rz0]]
+	c001 := per.randFloats[per.permX[rx0]^per.permY[ry0]^per.permZ[rz1]]
+	c010 := per.randFloats[per.permX[rx0]^per.permY[ry1]^per.permZ[rz0]]
+	c011 := per.randFloats[per.permX[rx0]^per.permY[ry1]^per.permZ[rz1]]
+	c100 := per.randFloats[per.permX[rx1]^per.permY[ry0]^per.permZ[rz0]]
+	c101 := per.randFloats[per.permX[rx1]^per.permY[ry0]^per.permZ[rz1]]
+	c110 := per.randFloats[per.permX[rx1]^per.permY[ry1]^per.permZ[rz0]]
+	c111 := per.randFloats[per.permX[rx1]^per.permY[ry1]^per.permZ[rz1]]
+
+	return TriLinearLerp(tx, ty, tz, c000, c100, c010, c110, c001, c101, c011, c111)
 }
 
 func GetNums(closedUpperEnd int) []int {
