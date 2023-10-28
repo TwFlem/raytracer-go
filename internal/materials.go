@@ -235,6 +235,19 @@ func (per *Perlin) Noise(p Vec3) float32 {
 	return TriLinearLerp(smoothstep(tx), smoothstep(ty), smoothstep(tz), c000, c100, c010, c110, c001, c101, c011, c111)
 }
 
+func (per *Perlin) Turb(p Vec3, depth int) float32 {
+	sum := float32(0)
+	weight := float32(1.0)
+
+	for i := 0; i < depth; i++ {
+		sum += weight * per.Noise(p)
+		weight *= 0.5
+		p.Scale(2)
+	}
+
+	return float32(math.Abs(float64(sum)))
+}
+
 func GetNums(closedUpperEnd int) []int {
 	n := make([]int, closedUpperEnd)
 	for i := 0; i < len(n); i++ {
@@ -257,7 +270,9 @@ type NoiseTexture struct {
 }
 
 func (n *NoiseTexture) GetTexture(u float32, v float32, point Vec3) Color {
-	return Scale(NewVec3Unit(), 0.5*(1+n.perlin.Noise(Scale(point, n.scale))))
+	point.Scale(n.scale)
+	return Scale(NewVec3Unit(), n.perlin.Turb(point, 7))
+	// return Scale(NewVec3Unit(), 0.5*(1+n.perlin.Noise(Scale(point, n.scale))))
 }
 
 func NewNoiseTexture(randCtx *rand.Rand, scale float32) NoiseTexture {
