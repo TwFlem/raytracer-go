@@ -271,8 +271,7 @@ type NoiseTexture struct {
 
 func (n *NoiseTexture) GetTexture(u float32, v float32, point Vec3) Color {
 	point.Scale(n.scale)
-	return Scale(NewVec3Unit(), n.perlin.Turb(point, 7))
-	// return Scale(NewVec3Unit(), 0.5*(1+n.perlin.Noise(Scale(point, n.scale))))
+	return Scale(NewVec3Unit(), 0.5*(1+float32(math.Sin(float64(point.Z+10*n.perlin.Turb(point, 7))))))
 }
 
 func NewNoiseTexture(randCtx *rand.Rand, scale float32) NoiseTexture {
