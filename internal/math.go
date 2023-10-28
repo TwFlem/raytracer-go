@@ -90,3 +90,20 @@ func TriLinearLerp(
 	f := BiLinearLerp(tx, ty, c001, c101, c011, c111)
 	return Lerp(tz, e, f)
 }
+
+// func PerlinBiLinearLerp(tx, ty float32, c00, c10, c01, c11 Vec3) float32 {
+// 	a := Add(Scale(c00, 1-tx), Scale(c10, tx))
+// 	b := Add(Scale(c01, 1-tx), Scale(c11, tx))
+// 	return Add(Scale(a, 1-ty), Scale(b, ty))
+// }
+//
+// func PerlinTriLinearLerp(
+// 	tx, ty, tz float32,
+// 	c000, c100, c010, c110 Vec3,
+// 	c001, c101, c011, c111 Vec3,
+// 	weight Vec3,
+// ) float32 {
+// 	e := Vec3BiLinearLerp(tx, ty, c000, c100, c010, c110)
+// 	f := Vec3BiLinearLerp(tx, ty, c001, c101, c011, c111)
+// 	return Add(Scale(e, 1-tz), Scale(f, tz))
+// }

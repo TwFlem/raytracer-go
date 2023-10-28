@@ -180,24 +180,24 @@ func (it *ImageTexture) GetTexture(u float32, v float32, point Vec3) Color {
 }
 
 type Perlin struct {
-	randFloats []float32
-	permX      []int
-	permY      []int
-	permZ      []int
+	randVec3 []Vec3
+	permX    []int
+	permY    []int
+	permZ    []int
 }
 
-func NewPerlin() Perlin {
+func NewPerlin(randCtx *rand.Rand) Perlin {
 	pointCount := 256
-	points := make([]float32, pointCount)
+	points := make([]Vec3, pointCount)
 	for i := 0; i < len(points); i++ {
-		points[i] = rand.Float32()
+		points[i] = NewVec3RandRange32(randCtx, -1, 1)
 	}
 
 	return Perlin{
-		randFloats: points,
-		permX:      Permute(GetNums(pointCount)),
-		permY:      Permute(GetNums(pointCount)),
-		permZ:      Permute(GetNums(pointCount)),
+		randVec3: points,
+		permX:    Permute(GetNums(pointCount)),
+		permY:    Permute(GetNums(pointCount)),
+		permZ:    Permute(GetNums(pointCount)),
 	}
 
 }
@@ -212,9 +212,9 @@ func (per *Perlin) Noise(p Vec3) float32 {
 	yi := float32(math.Floor(float64(p.Y)))
 	zi := float32(math.Floor(float64(p.Z)))
 
-	tx := smoothstep(p.X - float32(xi))
-	ty := smoothstep(p.Y - float32(yi))
-	tz := smoothstep(p.Z - float32(zi))
+	tx := p.X - float32(xi)
+	ty := p.Y - float32(yi)
+	tz := p.Z - float32(zi)
 
 	rx0 := int(xi) & 255
 	rx1 := (rx0 + 1) & 255
@@ -223,16 +223,16 @@ func (per *Perlin) Noise(p Vec3) float32 {
 	rz0 := int(zi) & 255
 	rz1 := (rz0 + 1) & 255
 
-	c000 := per.randFloats[per.permX[rx0]^per.permY[ry0]^per.permZ[rz0]]
-	c001 := per.randFloats[per.permX[rx0]^per.permY[ry0]^per.permZ[rz1]]
-	c010 := per.randFloats[per.permX[rx0]^per.permY[ry1]^per.permZ[rz0]]
-	c011 := per.randFloats[per.permX[rx0]^per.permY[ry1]^per.permZ[rz1]]
-	c100 := per.randFloats[per.permX[rx1]^per.permY[ry0]^per.permZ[rz0]]
-	c101 := per.randFloats[per.permX[rx1]^per.permY[ry0]^per.permZ[rz1]]
-	c110 := per.randFloats[per.permX[rx1]^per.permY[ry1]^per.permZ[rz0]]
-	c111 := per.randFloats[per.permX[rx1]^per.permY[ry1]^per.permZ[rz1]]
+	c000 := Dot(per.randVec3[per.permX[rx0]^per.permY[ry0]^per.permZ[rz0]], NewVec3(tx, ty, tz))
+	c001 := Dot(per.randVec3[per.permX[rx0]^per.permY[ry0]^per.permZ[rz1]], NewVec3(tx, ty, tz-1))
+	c010 := Dot(per.randVec3[per.permX[rx0]^per.permY[ry1]^per.permZ[rz0]], NewVec3(tx, ty-1, tz))
+	c011 := Dot(per.randVec3[per.permX[rx0]^per.permY[ry1]^per.permZ[rz1]], NewVec3(tx, ty-1, tz-1))
+	c100 := Dot(per.randVec3[per.permX[rx1]^per.permY[ry0]^per.permZ[rz0]], NewVec3(tx-1, ty, tz))
+	c101 := Dot(per.randVec3[per.permX[rx1]^per.permY[ry0]^per.permZ[rz1]], NewVec3(tx-1, ty, tz-1))
+	c110 := Dot(per.randVec3[per.permX[rx1]^per.permY[ry1]^per.permZ[rz0]], NewVec3(tx-1, ty-1, tz))
+	c111 := Dot(per.randVec3[per.permX[rx1]^per.permY[ry1]^per.permZ[rz1]], NewVec3(tx-1, ty-1, tz-1))
 
-	return TriLinearLerp(tx, ty, tz, c000, c100, c010, c110, c001, c101, c011, c111)
+	return TriLinearLerp(smoothstep(tx), smoothstep(ty), smoothstep(tz), c000, c100, c010, c110, c001, c101, c011, c111)
 }
 
 func GetNums(closedUpperEnd int) []int {
@@ -257,12 +257,12 @@ type NoiseTexture struct {
 }
 
 func (n *NoiseTexture) GetTexture(u float32, v float32, point Vec3) Color {
-	return Scale(NewVec3Unit(), n.perlin.Noise(Scale(point, n.scale)))
+	return Scale(NewVec3Unit(), 0.5*(1+n.perlin.Noise(Scale(point, n.scale))))
 }
 
-func NewNoiseTexture(scale float32) NoiseTexture {
+func NewNoiseTexture(randCtx *rand.Rand, scale float32) NoiseTexture {
 	return NoiseTexture{
-		perlin: NewPerlin(),
+		perlin: NewPerlin(randCtx),
 		scale:  scale,
 	}
 }
