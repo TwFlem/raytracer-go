@@ -33,6 +33,14 @@ func NewAabb(p1, p2 Vec3) Aabb {
 	}
 }
 
+func NewAabbFromIntervals(x, y, z Interval) Aabb {
+	return Aabb{
+		x: x,
+		y: y,
+		z: z,
+	}
+}
+
 func NewAabbFromBoxes(b1, b2 Aabb) Aabb {
 	return Aabb{
 		x: NewInterval(MinF32(b1.x.min, b2.x.min), MaxF32(b1.x.max, b2.x.max)),
@@ -50,6 +58,27 @@ func (a *Aabb) Hit(r *Ray, rT Interval) bool {
 		}
 	}
 	return false
+}
+
+func (a Aabb) GetPaddedAabb() Aabb {
+	eps := float32(0.0001)
+	x := a.x
+	if x.max-x.min < eps {
+		x.min -= eps
+		x.max += eps
+	}
+	y := a.y
+	if y.max-y.min < eps {
+		y.min -= eps
+		y.max += eps
+	}
+	z := a.z
+	if z.max-z.min < eps {
+		z.min -= eps
+		z.max += eps
+	}
+
+	return NewAabbFromIntervals(x, y, z)
 }
 
 func InBoundary(dir, origin, aMin, aMax float32, rT *Interval) bool {

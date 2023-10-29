@@ -14,6 +14,7 @@ const (
 	randSphereScene = 0
 	earthScene      = 1
 	perlinDemoScene = 2
+	quadDemoScene   = 3
 )
 
 func main() {
@@ -49,7 +50,7 @@ func main() {
 	if profileEnabled {
 		pprof.StartCPUProfile(cpuPprofF)
 	}
-	scene := perlinDemoScene
+	scene := quadDemoScene
 	switch scene {
 	case randSphereScene:
 		err = randSpheres(f)
@@ -57,6 +58,8 @@ func main() {
 		err = earth(f)
 	case perlinDemoScene:
 		err = perlinDemo(f)
+	case quadDemoScene:
+		err = quadDemo(f)
 	}
 	if profileEnabled {
 		pprof.StopCPUProfile()
@@ -113,6 +116,35 @@ func perlinDemo(f *os.File) error {
 	mat := internal.NewLambertian(&perlinTex)
 	world.Add(internal.NewSphere(internal.NewVec3(0, -1000, 0), 1000, &mat))
 	world.Add(internal.NewSphere(internal.NewVec3(0, 2, 0), 2, &mat))
+
+	worldTree := internal.NewBVHFromWorld(world)
+	return camera.Render(worldTree, f)
+}
+
+func quadDemo(f *os.File) error {
+	camera := internal.NewCamera(
+		16.0/9.0,
+		400.0,
+		internal.WithSamplesPerPixel(100),
+		internal.WithMaxRayDepth(50),
+		internal.WithLookFrom(internal.NewVec3(0, 0, 9)),
+		internal.WithLookAt(internal.NewVec3(0, 0, 0)),
+		internal.WithFOVDegrees(80),
+		internal.WithDefocusAngleDegrees(0),
+	)
+	world := internal.NewWorld()
+
+	leftRed := internal.NewLambertian(internal.NewSolidColor(1, 0.2, 0.2))
+	backGreen := internal.NewLambertian(internal.NewSolidColor(0.2, 1, 0.2))
+	rightBlue := internal.NewLambertian(internal.NewSolidColor(0.2, 0.2, 1))
+	upperOrange := internal.NewLambertian(internal.NewSolidColor(1, 0.5, 0))
+	lowerTeal := internal.NewLambertian(internal.NewSolidColor(0.2, 0.8, 0.8))
+
+	world.Add(internal.NewQuad(internal.NewVec3(-3, -2, 5), internal.NewVec3(0, 0, -4), internal.NewVec3(0, 4, 0), &leftRed))
+	world.Add(internal.NewQuad(internal.NewVec3(-2, -2, 0), internal.NewVec3(4, 0, 0), internal.NewVec3(0, 4, 0), &backGreen))
+	world.Add(internal.NewQuad(internal.NewVec3(3, -2, 1), internal.NewVec3(0, 0, 4), internal.NewVec3(0, 4, 0), &rightBlue))
+	world.Add(internal.NewQuad(internal.NewVec3(-2, 3, 1), internal.NewVec3(4, 0, 0), internal.NewVec3(0, 0, 4), &upperOrange))
+	world.Add(internal.NewQuad(internal.NewVec3(-2, -3, 5), internal.NewVec3(4, 0, 0), internal.NewVec3(0, 0, -4), &lowerTeal))
 
 	worldTree := internal.NewBVHFromWorld(world)
 	return camera.Render(worldTree, f)

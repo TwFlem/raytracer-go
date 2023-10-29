@@ -134,3 +134,65 @@ func (s *Sphere) Hit(r *Ray, rayT Interval) (HitInfo, bool) {
 func (s *Sphere) GetBounds() Aabb {
 	return s.bBox
 }
+
+type Quad struct {
+	Q        Vec3
+	u        Vec3
+	v        Vec3
+	w        Vec3
+	normal   Vec3
+	D        float32
+	material Material
+	bBox     Aabb
+}
+
+func NewQuad(Q, u, v Vec3, material Material) Quad {
+	n := Cross(u, v)
+	norm := Unit(n)
+	D := Dot(norm, Q)
+	w := Scale(n, 1/Dot(n, n))
+
+	return Quad{
+		Q:        Q,
+		u:        u,
+		v:        v,
+		w:        w,
+		material: material,
+		bBox:     NewAabb(Q, Add(Add(Q, u), v)).GetPaddedAabb(),
+		D:        D,
+		normal:   norm,
+	}
+}
+
+func (q Quad) Hit(r *Ray, rayT Interval) (HitInfo, bool) {
+	denom := Dot(r.dir, q.normal)
+
+	if math.Abs(float64(denom)) < 1e-8 {
+		return HitInfo{}, false
+	}
+
+	t := (q.D - Dot(q.normal, r.origin)) / denom
+
+	if !rayT.In(t, 0) {
+		return HitInfo{}, false
+	}
+
+	intersection := r.At(t)
+	planeHitPoint := Sub(intersection, q.Q)
+	alpha := Dot(q.w, Cross(planeHitPoint, q.v))
+	beta := Dot(q.w, Cross(q.u, planeHitPoint))
+
+	if !q.InPlane(alpha, beta) {
+		return HitInfo{}, false
+	}
+
+	return NewHitInfo(t, alpha, beta, r.dir, intersection, q.normal, q.material), true
+}
+
+func (q *Quad) InPlane(alpha, beta float32) bool {
+	return !(alpha < 0 || 1 < alpha || beta < 0 || 1 < beta)
+}
+
+func (q Quad) GetBounds() Aabb {
+	return q.bBox
+}
