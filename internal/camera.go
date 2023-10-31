@@ -48,6 +48,7 @@ type Camera struct {
 	fovRadians          float32
 	workers             chan *CameraWorker
 	once                sync.Once
+	background          Color
 }
 
 type CameraOpt func(*Camera)
@@ -94,6 +95,12 @@ func WithFocusDist(dist float32) CameraOpt {
 	}
 }
 
+func WithBackgroundColor(color Color) CameraOpt {
+	return func(c *Camera) {
+		c.background = color
+	}
+}
+
 func NewCamera(aspectRatio float32, imageWidth int, opts ...CameraOpt) *Camera {
 	c := &Camera{
 		aspectRatio:         aspectRatio,
@@ -106,6 +113,7 @@ func NewCamera(aspectRatio float32, imageWidth int, opts ...CameraOpt) *Camera {
 		lookAt:              NewVec3(0, 0, 0),
 		lookFrom:            NewVec3(0, 0, -1),
 		vup:                 NewVec3(0, 1, 0),
+		background:          NewVec3(0, 0, 0),
 	}
 
 	for _, fn := range opts {
@@ -247,7 +255,7 @@ func (c *Camera) GetPixelColor(world Hittable, cw *CameraWorker, i, j int) Color
 	sample := NewVec3Zero()
 	for k := 0; k < c.samplesPerPixel; k++ {
 		ray := c.GetRay(cw, i, j)
-		s := ray.GetColor(world, c.bounceDepth).GetColor()
+		s := ray.GetColor(world, c.background, c.bounceDepth).GetColor()
 		sample.Add(s)
 	}
 	sample.Scale(1.0 / float32(c.samplesPerPixel))

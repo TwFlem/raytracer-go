@@ -11,10 +11,12 @@ import (
 
 const profileEnabled = true
 const (
-	randSphereScene = 0
-	earthScene      = 1
-	perlinDemoScene = 2
-	quadDemoScene   = 3
+	randSphereScene      = 0
+	earthScene           = 1
+	perlinDemoScene      = 2
+	quadDemoScene        = 3
+	simpleLightDemoScene = 4
+	cornellBoxDemoScene  = 5
 )
 
 func main() {
@@ -50,7 +52,7 @@ func main() {
 	if profileEnabled {
 		pprof.StartCPUProfile(cpuPprofF)
 	}
-	scene := quadDemoScene
+	scene := cornellBoxDemoScene
 	switch scene {
 	case randSphereScene:
 		err = randSpheres(f)
@@ -60,6 +62,10 @@ func main() {
 		err = perlinDemo(f)
 	case quadDemoScene:
 		err = quadDemo(f)
+	case simpleLightDemoScene:
+		err = simpleLightDemo(f)
+	case cornellBoxDemoScene:
+		err = cornellBox(f)
 	}
 	if profileEnabled {
 		pprof.StopCPUProfile()
@@ -81,6 +87,7 @@ func earth(f *os.File) error {
 		internal.WithLookAt(internal.NewVec3(0, 0, 0)),
 		internal.WithFOVDegrees(20),
 		internal.WithDefocusAngleDegrees(0),
+		internal.WithBackgroundColor(internal.NewVec3(0.7, 0.8, 1)),
 	)
 	world := internal.NewWorld()
 
@@ -106,6 +113,7 @@ func perlinDemo(f *os.File) error {
 		internal.WithLookAt(internal.NewVec3(0, 0, 0)),
 		internal.WithFOVDegrees(20),
 		internal.WithDefocusAngleDegrees(0),
+		internal.WithBackgroundColor(internal.NewVec3(0.7, 0.8, 1)),
 	)
 	world := internal.NewWorld()
 
@@ -131,6 +139,7 @@ func quadDemo(f *os.File) error {
 		internal.WithLookAt(internal.NewVec3(0, 0, 0)),
 		internal.WithFOVDegrees(80),
 		internal.WithDefocusAngleDegrees(0),
+		internal.WithBackgroundColor(internal.NewVec3(0.7, 0.8, 1)),
 	)
 	world := internal.NewWorld()
 
@@ -150,6 +159,68 @@ func quadDemo(f *os.File) error {
 	return camera.Render(worldTree, f)
 }
 
+func simpleLightDemo(f *os.File) error {
+	camera := internal.NewCamera(
+		16.0/9.0,
+		400.0,
+		internal.WithSamplesPerPixel(500),
+		internal.WithMaxRayDepth(50),
+		internal.WithLookFrom(internal.NewVec3(26, 3, 6)),
+		internal.WithLookAt(internal.NewVec3(0, 2, 0)),
+		internal.WithFOVDegrees(20),
+		internal.WithDefocusAngleDegrees(0),
+		internal.WithBackgroundColor(internal.NewVec3Zero()),
+	)
+	world := internal.NewWorld()
+
+	src := rand.NewSource(time.Now().Unix())
+	randCtx := rand.New(src)
+
+	perlinTex := internal.NewNoiseTexture(randCtx, 4)
+	mat := internal.NewLambertian(&perlinTex)
+	world.Add(internal.NewSphere(internal.NewVec3(0, -1000, 0), 1000, &mat))
+	world.Add(internal.NewSphere(internal.NewVec3(0, 2, 0), 2, &mat))
+
+	red := internal.NewLambertian(internal.NewSolidColor(1, 0, 0))
+	world.Add(internal.NewSphere(internal.NewVec3(-4, 2, 4), 2, &red))
+
+	diffLight := internal.NewDiffuseLight(internal.NewSolidColor(4, 4, 4))
+	world.Add(internal.NewSphere(internal.NewVec3(0, 7, 0), 2, &diffLight))
+
+	worldTree := internal.NewBVHFromWorld(world)
+	return camera.Render(worldTree, f)
+}
+
+func cornellBox(f *os.File) error {
+	camera := internal.NewCamera(
+		1,
+		600.0,
+		internal.WithSamplesPerPixel(200),
+		internal.WithMaxRayDepth(50),
+		internal.WithLookFrom(internal.NewVec3(278, 278, -800)),
+		internal.WithLookAt(internal.NewVec3(278, 278, 0)),
+		internal.WithFOVDegrees(40),
+		internal.WithDefocusAngleDegrees(0),
+		internal.WithBackgroundColor(internal.NewVec3Zero()),
+	)
+	world := internal.NewWorld()
+
+	red := internal.NewLambertian(internal.NewSolidColor(.65, .05, .05))
+	white := internal.NewLambertian(internal.NewSolidColor(.73, .73, .73))
+	green := internal.NewLambertian(internal.NewSolidColor(.12, .45, .15))
+	light := internal.NewDiffuseLight(internal.NewSolidColor(15, 15, 15))
+
+	world.Add(internal.NewQuad(internal.NewVec3(555, 0, 0), internal.NewVec3(0, 555, 0), internal.NewVec3(0, 0, 555), &green))
+	world.Add(internal.NewQuad(internal.NewVec3(0, 0, 0), internal.NewVec3(0, 555, 0), internal.NewVec3(0, 0, 555), &red))
+	world.Add(internal.NewQuad(internal.NewVec3(343, 554, 332), internal.NewVec3(-130, 0, 0), internal.NewVec3(0, 0, -105), &light))
+	world.Add(internal.NewQuad(internal.NewVec3(0, 0, 0), internal.NewVec3(555, 0, 0), internal.NewVec3(0, 0, 555), &white))
+	world.Add(internal.NewQuad(internal.NewVec3(555, 555, 555), internal.NewVec3(-555, 0, 0), internal.NewVec3(0, 0, -555), &white))
+	world.Add(internal.NewQuad(internal.NewVec3(0, 0, 555), internal.NewVec3(555, 0, 0), internal.NewVec3(0, 555, 0), &white))
+
+	worldTree := internal.NewBVHFromWorld(world)
+	return camera.Render(worldTree, f)
+}
+
 func randSpheres(f *os.File) error {
 	camera := internal.NewCamera(
 		16.0/9.0,
@@ -161,6 +232,7 @@ func randSpheres(f *os.File) error {
 		internal.WithFOVDegrees(20),
 		internal.WithDefocusAngleDegrees(0.6),
 		internal.WithFocusDist(10),
+		internal.WithBackgroundColor(internal.NewVec3(0.7, 0.8, 1)),
 	)
 	world := internal.NewWorld()
 

@@ -29,58 +29,28 @@ func (r *Ray) At(t float32) Vec3 {
 	return dir
 }
 
-type GetColorInfo struct {
-	color   Color
-	nextRay *Ray
-}
-
-func (r *Ray) GetColor(world Hittable, maxDepth int) Color {
-	initColorInfo := getNextColor(r, world)
-	color := initColorInfo.color.GetColor()
-	if initColorInfo.nextRay != nil {
-		nextRay := initColorInfo.nextRay
-		bounce := 1
-		for nextRay != nil && bounce < maxDepth {
-			cInfo := getNextColor(nextRay, world)
-			color.Mul(cInfo.color.GetColor())
-			nextRay = cInfo.nextRay
-			bounce++
-		}
-		if bounce >= maxDepth {
-			return NewVec3Zero()
-		}
+func (r *Ray) GetColor(world Hittable, backgroundColor Color, maxDepth int) Color {
+	if maxDepth <= 0 {
+		return NewVec3Zero()
 	}
-	return color
-}
 
-func getNextColor(r *Ray, world Hittable) GetColorInfo {
 	if hitInfo, ok := world.Hit(r, Interval{
 		min: 0.001,
 		max: float32(math.Inf(1)),
 	}); ok {
-		if scatterInfo, ok := hitInfo.material.Scatter(r, hitInfo); ok {
-			return GetColorInfo{
-				color:   scatterInfo.attenuation,
-				nextRay: &scatterInfo.ray,
-			}
+		colorFromEmission := hitInfo.material.Emit(hitInfo.u, hitInfo.v, hitInfo.point).GetColor()
+		scatterInfo, didScatter := hitInfo.material.Scatter(r, hitInfo)
+
+		if !didScatter {
+			return colorFromEmission
 		}
-		return GetColorInfo{
-			color:   NewVec3Zero(),
-			nextRay: nil,
-		}
+
+		colorFromScatter := Mul(scatterInfo.attenuation.GetColor(), scatterInfo.ray.GetColor(world, backgroundColor, maxDepth-1).GetColor())
+
+		return Add(colorFromEmission, colorFromScatter)
 	}
 
-	unit := Unit(r.dir)
-	a := 0.5 * (unit.Y + 1)
-
-	white := NewVec3(1, 1, 1)
-	blue := NewVec3(0.5, 0.7, 1)
-
-	sky := Add(Scale(white, (1.0-a)), Scale(blue, a))
-	return GetColorInfo{
-		color:   sky,
-		nextRay: nil,
-	}
+	return backgroundColor
 }
 
 type Color interface {

@@ -8,6 +8,7 @@ import (
 
 type Material interface {
 	Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool)
+	Emit(u, v float32, p Vec3) Color
 }
 
 type ScatterInfo struct {
@@ -17,6 +18,10 @@ type ScatterInfo struct {
 
 type Lambertian struct {
 	albedo Texture
+}
+
+func (l Lambertian) Emit(u float32, v float32, p Vec3) Color {
+	return NewVec3Zero()
 }
 
 func NewLambertian(albedo Texture) Lambertian {
@@ -39,6 +44,10 @@ func (l *Lambertian) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 type Metal struct {
 	albedo Color
 	fuzz   float32
+}
+
+func (m Metal) Emit(u float32, v float32, p Vec3) Color {
+	return NewVec3Zero()
 }
 
 func NewMetal(albedo Vec3, fuzz float32) Metal {
@@ -67,6 +76,10 @@ func (m *Metal) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
 
 type Dielectric struct {
 	refractiveIndex float32
+}
+
+func (d *Dielectric) Emit(u float32, v float32, p Vec3) Color {
+	return NewVec3Zero()
 }
 
 func NewDielectric(refracitveIndex float32) Dielectric {
@@ -279,4 +292,22 @@ func NewNoiseTexture(randCtx *rand.Rand, scale float32) NoiseTexture {
 		perlin: NewPerlin(randCtx),
 		scale:  scale,
 	}
+}
+
+type DiffuseLight struct {
+	emit Texture
+}
+
+func (d DiffuseLight) Scatter(r *Ray, hi HitInfo) (ScatterInfo, bool) {
+	return ScatterInfo{}, false
+}
+
+func NewDiffuseLight(emit Texture) DiffuseLight {
+	return DiffuseLight{
+		emit: emit,
+	}
+}
+
+func (d DiffuseLight) Emit(u float32, v float32, p Vec3) Color {
+	return d.emit.GetTexture(u, v, p)
 }
