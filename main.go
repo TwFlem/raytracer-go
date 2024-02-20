@@ -217,6 +217,9 @@ func cornellBox(f *os.File) error {
 	world.Add(internal.NewQuad(internal.NewVec3(555, 555, 555), internal.NewVec3(-555, 0, 0), internal.NewVec3(0, 0, -555), &white))
 	world.Add(internal.NewQuad(internal.NewVec3(0, 0, 555), internal.NewVec3(555, 0, 0), internal.NewVec3(0, 555, 0), &white))
 
+	world.Add(internal.Box(internal.NewVec3(130, 0, 65), internal.NewVec3(295, 165, 230), &white)...)
+	world.Add(internal.Box(internal.NewVec3(265, 0, 295), internal.NewVec3(430, 330, 460), &white)...)
+
 	worldTree := internal.NewBVHFromWorld(world)
 	return camera.Render(worldTree, f)
 }

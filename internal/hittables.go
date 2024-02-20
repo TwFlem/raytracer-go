@@ -196,3 +196,21 @@ func (q *Quad) InPlane(alpha, beta float32) bool {
 func (q Quad) GetBounds() Aabb {
 	return q.bBox
 }
+
+func Box(a, b Vec3, mat Material) []Hittable {
+	min := NewVec3(MinF32(a.X, b.X), MinF32(a.Y, b.Y), MinF32(a.Z, b.Z))
+	max := NewVec3(MaxF32(a.X, b.X), MaxF32(a.Y, b.Y), MaxF32(a.Z, b.Z))
+
+	dx := NewVec3(max.X-min.X, 0, 0)
+	dy := NewVec3(0, max.Y-min.Y, 0)
+	dz := NewVec3(0, 0, max.Z-min.Z)
+
+	return []Hittable{
+		NewQuad(NewVec3(min.X, min.Y, max.Z), dx, dy, mat),
+		NewQuad(NewVec3(max.X, min.Y, max.Z), Scale(dz, -1), dy, mat),
+		NewQuad(NewVec3(max.X, min.Y, min.Z), Scale(dx, -1), dy, mat),
+		NewQuad(NewVec3(min.X, min.Y, min.Z), dz, dy, mat),
+		NewQuad(NewVec3(min.X, max.Y, max.Z), dx, Scale(dz, -1), mat),
+		NewQuad(NewVec3(min.X, min.Y, min.Z), dx, dz, mat),
+	}
+}
