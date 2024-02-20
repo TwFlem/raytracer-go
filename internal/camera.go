@@ -2,7 +2,6 @@ package internal
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"math"
 	"math/rand"
@@ -17,7 +16,9 @@ import (
 
 // CameraWorker workers that concurrently generate colors of pixels
 type CameraWorker struct {
-	rand *rand.Rand
+	rand             *rand.Rand
+	emissionStack    []Color
+	attenuationStack []Color
 }
 
 type Camera struct {
@@ -46,7 +47,6 @@ type Camera struct {
 	defocusDiskU        Vec3
 	defocusDiskV        Vec3
 	fovRadians          float32
-	workers             chan *CameraWorker
 	once                sync.Once
 	background          Color
 }
@@ -163,17 +163,6 @@ func (c *Camera) init() {
 		defocusRadius := c.focusDistance * float32(math.Tan(float64(c.defocusAngleRadians/2.0)))
 		c.defocusDiskU = Scale(c.u, defocusRadius)
 		c.defocusDiskV = Scale(c.v, defocusRadius)
-
-		numWorkers := runtime.NumCPU()
-		c.workers = make(chan *CameraWorker, numWorkers)
-		for i := 0; i < numWorkers; i++ {
-			src := rand.NewSource(time.Now().UnixNano())
-			randCtx := rand.New(src)
-			c.workers <- &CameraWorker{
-				rand: randCtx,
-			}
-		}
-
 	})
 }
 
@@ -192,42 +181,74 @@ func (c *Camera) Render(world Hittable, writer io.Writer) error {
 
 	ctx := context.Background()
 
-	// TODO: add real error handing if a chunk write fails or any other kind of error
-	// TODO: make a png or something instead of ppm
-	// TODO: give worker contexts arenas for allocations
-	colorsOut := make(chan (<-chan string), len(c.workers))
-	go func() {
-		defer close(colorsOut)
-		var wg sync.WaitGroup
-		for j := 0; j < h; j++ {
-			fmt.Printf("coloring line %d out of %d\n", j+1, h)
-			for i := 0; i < w; i++ {
-				cw := <-c.workers
-				in := make(chan string)
-				wg.Add(1)
-				go func(innerWorld Hittable, innerIn chan string, innerCw *CameraWorker, innerI, innerJ int) {
-					defer close(innerIn)
-					col := c.GetPixelColor(innerWorld, innerCw, innerI, innerJ)
-					c.workers <- innerCw
-					colorVec := col.GetColor()
-					colorVec.ToGamma2()
-					colorVec.ToRGB()
-					innerIn <- colorVec.String()
-					wg.Done()
-				}(world, in, cw, i, j)
-				colorsOut <- in
+	numThreads := runtime.NumCPU()
+	colorsOut := make([]<-chan string, numThreads)
+	area := h * w
+	for t := 0; t < numThreads; t++ {
+		threadInput := make(chan string)
+		go func(threadNum int, in chan string, innerWorld Hittable) {
+			defer close(in)
+			src := rand.NewSource(time.Now().UnixNano())
+			randCtx := rand.New(src)
+			cw := CameraWorker{
+				rand:             randCtx,
+				attenuationStack: make([]Color, c.bounceDepth),
+				emissionStack:    make([]Color, c.bounceDepth),
 			}
-		}
-		wg.Wait()
-	}()
+			for i := threadNum; i < area; i = i + numThreads {
+				x := i % w
+				y := i / h
+				col := c.GetPixelColor(&cw, innerWorld, x, y)
+				colorVec := col.GetColor()
+				colorVec.ToGamma2()
+				colorVec.ToRGB()
+				in <- colorVec.String()
+			}
+		}(t, threadInput, world)
+		colorsOut[t] = threadInput
+	}
 
-	orderedPixelsOut := stage.Bridge(ctx.Done(), colorsOut)
+	orderedPixelsOut := Interleave(ctx.Done(), colorsOut...)
 	chunksOut := stage.Agg(ctx.Done(), orderedPixelsOut, 5000)
 	bufChunksOut := stage.Buf(ctx.Done(), chunksOut, 2)
 	chunkResultOut := c.StartChunkRenderer(writer, bufChunksOut)
 
 	res := <-chunkResultOut
 	return res.err
+}
+
+// Bridge takes a channel of channels as input and streams out the values of each of those
+// channels on a single output. This is similar
+// to how FanIn works except that with the channels of channel input, order is implicitly
+// maintained.
+func Interleave[T any](done <-chan struct{}, ins ...<-chan T) <-chan T {
+	out := make(chan T)
+	go func() {
+		defer close(out)
+		closed := make([]bool, len(ins))
+		closedCount := 0
+		for {
+			for i, in := range ins {
+				select {
+				case <-done:
+					return
+				case v, ok := <-in:
+					if !ok {
+						if !closed[i] {
+							closed[i] = true
+							closedCount++
+						}
+						continue
+					}
+					out <- v
+				}
+			}
+			if closedCount >= len(ins) {
+				return
+			}
+		}
+	}()
+	return out
 }
 
 type RenderChunkResult struct {
@@ -251,12 +272,59 @@ func (c *Camera) StartChunkRenderer(writer io.Writer, chunksIn <-chan []string) 
 
 }
 
-func (c *Camera) GetPixelColor(world Hittable, cw *CameraWorker, i, j int) Color {
+// func (c *Camera) GetPixelColor(cw *CameraWorker, world Hittable, i, j int) Color {
+// 	sample := NewVec3Zero()
+// 	for k := 0; k < c.samplesPerPixel; k++ {
+// 		ray := c.GetRay(cw, i, j)
+// 		s := ray.GetColor(world, c.background, c.bounceDepth).GetColor()
+//
+// 		sample.Add(s)
+// 	}
+// 	sample.Scale(1.0 / float32(c.samplesPerPixel))
+// 	return sample
+// }
+
+// TODO: can we allocate a fix sized slice to CameraWorker an reuse it over and over again?
+func (c *Camera) GetPixelColor(cw *CameraWorker, world Hittable, pixelX, pixelY int) Color {
 	sample := NewVec3Zero()
-	for k := 0; k < c.samplesPerPixel; k++ {
-		ray := c.GetRay(cw, i, j)
-		s := ray.GetColor(world, c.background, c.bounceDepth).GetColor()
-		sample.Add(s)
+	for i := 0; i < c.samplesPerPixel; i++ {
+		currRay := c.GetRay(cw, pixelX, pixelY)
+
+		var currRayColor Color
+		stopped := 0
+		for j := 0; j < c.bounceDepth; j++ {
+			hitInfo, ok := world.Hit(currRay, Interval{0.001, float32(math.Inf(1))})
+			if !ok {
+				currRayColor = c.background
+				stopped = j
+				break
+			}
+
+			colorFromEmission := hitInfo.material.Emit(hitInfo.u, hitInfo.v, hitInfo.point)
+			scatterInfo, didScatter := hitInfo.material.Scatter(currRay, hitInfo)
+
+			if !didScatter {
+				currRayColor = colorFromEmission
+				stopped = j
+				break
+			}
+
+			cw.attenuationStack[j] = scatterInfo.attenuation
+			cw.emissionStack[j] = colorFromEmission
+			currRay = &scatterInfo.ray
+		}
+
+		if currRayColor == nil {
+			continue
+		}
+
+		currRaySample := currRayColor.GetColor()
+		for j := 0; j < stopped; j++ {
+			currRaySample.Mul(cw.attenuationStack[stopped-1-j].GetColor())
+			currRaySample.Add(cw.emissionStack[stopped-1-j].GetColor())
+		}
+
+		sample.Add(currRaySample)
 	}
 	sample.Scale(1.0 / float32(c.samplesPerPixel))
 	return sample
