@@ -272,59 +272,13 @@ func (c *Camera) StartChunkRenderer(writer io.Writer, chunksIn <-chan []string) 
 
 }
 
-// func (c *Camera) GetPixelColor(cw *CameraWorker, world Hittable, i, j int) Color {
-// 	sample := NewVec3Zero()
-// 	for k := 0; k < c.samplesPerPixel; k++ {
-// 		ray := c.GetRay(cw, i, j)
-// 		s := ray.GetColor(world, c.background, c.bounceDepth).GetColor()
-//
-// 		sample.Add(s)
-// 	}
-// 	sample.Scale(1.0 / float32(c.samplesPerPixel))
-// 	return sample
-// }
-
-// TODO: can we allocate a fix sized slice to CameraWorker an reuse it over and over again?
 func (c *Camera) GetPixelColor(cw *CameraWorker, world Hittable, pixelX, pixelY int) Color {
 	sample := NewVec3Zero()
 	for i := 0; i < c.samplesPerPixel; i++ {
 		currRay := c.GetRay(cw, pixelX, pixelY)
 
-		var currRayColor Color
-		stopped := 0
-		for j := 0; j < c.bounceDepth; j++ {
-			hitInfo, ok := world.Hit(currRay, Interval{0.001, float32(math.Inf(1))})
-			if !ok {
-				currRayColor = c.background
-				stopped = j
-				break
-			}
-
-			colorFromEmission := hitInfo.material.Emit(hitInfo.u, hitInfo.v, hitInfo.point)
-			scatterInfo, didScatter := hitInfo.material.Scatter(currRay, hitInfo)
-
-			if !didScatter {
-				currRayColor = colorFromEmission
-				stopped = j
-				break
-			}
-
-			cw.attenuationStack[j] = scatterInfo.attenuation
-			cw.emissionStack[j] = colorFromEmission
-			currRay = &scatterInfo.ray
-		}
-
-		if currRayColor == nil {
-			continue
-		}
-
-		currRaySample := currRayColor.GetColor()
-		for j := 0; j < stopped; j++ {
-			currRaySample.Mul(cw.attenuationStack[stopped-1-j].GetColor())
-			currRaySample.Add(cw.emissionStack[stopped-1-j].GetColor())
-		}
-
-		sample.Add(currRaySample)
+		currRaySample := currRay.GetColor(cw, world, c.background, c.bounceDepth)
+		sample.Add(currRaySample.GetColor())
 	}
 	sample.Scale(1.0 / float32(c.samplesPerPixel))
 	return sample

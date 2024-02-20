@@ -29,28 +29,42 @@ func (r *Ray) At(t float32) Vec3 {
 	return dir
 }
 
-func (r *Ray) GetColor(world Hittable, backgroundColor Color, maxDepth int) Color {
-	if maxDepth <= 0 {
+func (r *Ray) GetColor(cw *CameraWorker, world Hittable, backgroundColor Color, bounceDepth int) Color {
+	currRay := r
+	var currRayColor Color
+	stopped := 0
+	for j := 0; j < bounceDepth; j++ {
+		hitInfo, ok := world.Hit(currRay, Interval{0.001, float32(math.Inf(1))})
+		if !ok {
+			currRayColor = backgroundColor
+			stopped = j
+			break
+		}
+
+		colorFromEmission := hitInfo.material.Emit(hitInfo.u, hitInfo.v, hitInfo.point)
+		scatterInfo, didScatter := hitInfo.material.Scatter(currRay, hitInfo)
+
+		if !didScatter {
+			currRayColor = colorFromEmission
+			stopped = j
+			break
+		}
+
+		cw.attenuationStack[j] = scatterInfo.attenuation
+		cw.emissionStack[j] = colorFromEmission
+		currRay = &scatterInfo.ray
+	}
+
+	if currRayColor == nil {
 		return NewVec3Zero()
 	}
 
-	if hitInfo, ok := world.Hit(r, Interval{
-		min: 0.001,
-		max: float32(math.Inf(1)),
-	}); ok {
-		colorFromEmission := hitInfo.material.Emit(hitInfo.u, hitInfo.v, hitInfo.point).GetColor()
-		scatterInfo, didScatter := hitInfo.material.Scatter(r, hitInfo)
-
-		if !didScatter {
-			return colorFromEmission
-		}
-
-		colorFromScatter := Mul(scatterInfo.attenuation.GetColor(), scatterInfo.ray.GetColor(world, backgroundColor, maxDepth-1).GetColor())
-
-		return Add(colorFromEmission, colorFromScatter)
+	currRaySample := currRayColor.GetColor()
+	for j := 0; j < stopped; j++ {
+		currRaySample.Mul(cw.attenuationStack[stopped-1-j].GetColor())
+		currRaySample.Add(cw.emissionStack[stopped-1-j].GetColor())
 	}
-
-	return backgroundColor
+	return currRaySample
 }
 
 type Color interface {
