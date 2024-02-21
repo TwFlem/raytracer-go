@@ -217,33 +217,32 @@ func (c *Camera) Render(world Hittable, writer io.Writer) error {
 	return res.err
 }
 
-// Bridge takes a channel of channels as input and streams out the values of each of those
-// channels on a single output. This is similar
-// to how FanIn works except that with the channels of channel input, order is implicitly
-// maintained.
 func Interleave[T any](done <-chan struct{}, ins ...<-chan T) <-chan T {
 	out := make(chan T)
 	go func() {
+		insCpy := make([]<-chan T, len(ins))
+		copy(insCpy, ins)
 		defer close(out)
-		closed := make([]bool, len(ins))
 		closedCount := 0
 		for {
-			for i, in := range ins {
+			for i := range insCpy {
+				if insCpy[i] == nil {
+					continue
+				}
+
 				select {
 				case <-done:
 					return
-				case v, ok := <-in:
+				case v, ok := <-insCpy[i]:
 					if !ok {
-						if !closed[i] {
-							closed[i] = true
-							closedCount++
-						}
+						closedCount++
+						insCpy[i] = nil
 						continue
 					}
 					out <- v
 				}
 			}
-			if closedCount >= len(ins) {
+			if closedCount >= len(insCpy) {
 				return
 			}
 		}
